@@ -142,7 +142,7 @@ Int_t MPDGEMPlane::ReadDatabase( const TDatime& date ){
         thisdata.invert = fChanMapData[7+mapline*MPDMAP_ROW_SIZE];
         fMPDmap.push_back(thisdata);
     }
-
+    //       127 channels * number of APVs
     fNelem = N_APV25_CHAN*fMPDmap.size();
 
     SafeDelete(fADCraw);
@@ -154,14 +154,30 @@ Int_t MPDGEMPlane::ReadDatabase( const TDatime& date ){
 
     std::cout << fName << " mapped to " << nentry << " APV25 chips" << std::endl;
 
+    // in order to get the reasonable result for the the TS, initialize all the vector to 0
+//    for( UInt_t i = 0; i < fMaxSamp; i++ ){
+//        fADCForm[i] = new Int_t [fNelem];
+//        frawADC[i] = new Int_t [fNelem];
+//
+//        // probaboly this is not right --SIYU
+//        std::cout<<"[Test "<<__FUNCTION__<<"/"<<__LINE__<<"]::: fMaxSamp"<<fMaxSamp<<std::endl;
+//        for( UInt_t j = 0; j < fMaxSamp; j++ ){
+//            fADCForm[i][j] = 0.0;
+//            frawADC[i][j] = 0.0;
+//        }
+//    }
+
     for( UInt_t i = 0; i < fMaxSamp; i++ ){
-        fADCForm[i] = new Int_t [fNelem];
-        frawADC[i] = new Int_t [fNelem];
-        for( UInt_t j = 0; j < fMaxSamp; j++ ){
-            fADCForm[i][j] = 0.0;
-            frawADC[i][j] = 0.0;
+            fADCForm[i] = new Int_t [fNelem];
+            frawADC[i] = new Int_t [fNelem];
+
+            for( UInt_t j = 0; j < fNelem; j++ ){
+                fADCForm[i][j] = 0.0;
+                frawADC[i][j] = 0.0;
+            }
         }
-    }
+
+
     fADC0 = fADCForm[0];
     fADC1 = fADCForm[1];
     fADC2 = fADCForm[2];
@@ -307,9 +323,10 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 //    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
     fNch = 0;
-    for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
+    for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it)
+    {
         // Find channel for trigger time first
-        Int_t effChan = it->mpd_id << 5 ;  // Channel reserved for trigger time
+    Int_t effChan = it->mpd_id << 5 ;  // Channel reserved for trigger time
 	ULong_t coarse_time1 = evdata.GetData(it->crate,it->slot,effChan,0);
 	UInt_t coarse_time2 = evdata.GetData(it->crate,it->slot,effChan,1);
 	UInt_t fine_time = evdata.GetData(it->crate,it->slot,effChan,2);
@@ -324,7 +341,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
         Int_t fNchan = evdata.GetNumChan( it->crate, it->slot );
 
-//        printf("fNchan = %d\n", fNchan );
+        //printf("fNchan = %d\n", fNchan ); //57 for 3 ts why?
 
         for( Int_t ichan = 0; ichan < fNchan; ++ichan ) {
             Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
@@ -333,8 +350,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
             UInt_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
 
-            //std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
-            //std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
+            std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
+            std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
 
             assert( nsamp == N_APV25_CHAN*fMaxSamp );
 	    
@@ -371,8 +388,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
                 MPDStripData_t stripdata = ChargeDep(samples);
 
-		// copy adc sum and its fNCH
-		arrADCSum[strip] = fADCSum[fNch];
+                // copy adc sum and its fNCH
+                arrADCSum[strip] = fADCSum[fNch];
 
                 ++fNrawStrips;
                 ++fNhitStrips;
