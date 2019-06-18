@@ -1,0 +1,13 @@
+# block sbs.gems.*
+block prex.tr.*
+block prex.gems.*
+block prex.gems.[xy][1234].adc*
+block prex.gems.[xy][1234].trigger_time
+block prex.gems.[xy][1234].ev_num
+block prex.gems.[xy][1234].nhits
+block prex.gems.[xy][1234].hit.*
+block prex.gems.[xy][1234].strip.*
+block prex.gems.[xy][1234].coord.*
+block prex.gems.[xy].nroads
+block prex.gems.[xy].ngood
+block prex.gems.[xy].rd.*
