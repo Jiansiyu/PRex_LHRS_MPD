@@ -303,141 +303,147 @@ void MPDGEMPlane::Clear( Option_t* opt ){
 }
 
 Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
+
     std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
-    fNch = 0;
-    for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
-        // Find channel for trigger time first
-        Int_t effChan = it->mpd_id << 5 ;  // Channel reserved for trigger time
-	ULong_t coarse_time1 = evdata.GetData(it->crate,it->slot,effChan,0);
-	UInt_t coarse_time2 = evdata.GetData(it->crate,it->slot,effChan,1);
-	UInt_t fine_time = evdata.GetData(it->crate,it->slot,effChan,2);
-	trigger_time = ((coarse_time1<<20)|coarse_time2)+fine_time/6.0;
-	
-	effChan = it->mpd_id<<4;
-	ev_num = evdata.GetData(it->crate,it->slot,effChan,0);
-	
-	// Start reading data sample
-        effChan = it->mpd_id << 8 | it->adc_id;
-        // Find channel for this crate/slot
+	fNch = 0;
+	for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin();
+			it != fMPDmap.end(); ++it) {
+		// Find channel for trigger time first
+		Int_t effChan = it->mpd_id << 5;  // Channel reserved for trigger time
+		ULong_t coarse_time1 = evdata.GetData(it->crate, it->slot, effChan, 0);
+		UInt_t coarse_time2 = evdata.GetData(it->crate, it->slot, effChan, 1);
+		UInt_t fine_time = evdata.GetData(it->crate, it->slot, effChan, 2);
+		trigger_time = ((coarse_time1 << 20) | coarse_time2) + fine_time / 6.0;
 
-        Int_t fNchan = evdata.GetNumChan( it->crate, it->slot );
+		effChan = it->mpd_id << 4;
+		ev_num = evdata.GetData(it->crate, it->slot, effChan, 0);
 
-//        printf("fNchan = %d\n", fNchan );
+		// Start reading data sample
+		effChan = it->mpd_id << 8 | it->adc_id;
+		// Find channel for this crate/slot
 
-        for( Int_t ichan = 0; ichan < fNchan; ++ichan ) {
-            Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
-            if( chan != effChan ) continue; // not part of this detector
+		Int_t fNchan = evdata.GetNumChan(it->crate, it->slot);
 
+		printf("fNchan = %d\n", fNchan);
 
-            UInt_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
+		for (Int_t ichan = 0; ichan < fNchan; ++ichan) {
+			Int_t chan = evdata.GetNextChan(it->crate, it->slot, ichan);
+			if (chan != effChan)
+				continue; // not part of this detector
 
-            //std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
-            //std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
+			UInt_t nsamp = evdata.GetNumHits(it->crate, it->slot, chan);
 
-            assert( nsamp == N_APV25_CHAN*fMaxSamp );
-	    
-	    Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
+			std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id
+					<< " found " << nsamp << std::endl;
+			std::cout << nsamp << " samples detected (" << nsamp / N_APV25_CHAN
+					<< ")" << std::endl;
 
-            Int_t fNchStartOfAPV = fNch;
-            for( Int_t strip = 0; strip < N_APV25_CHAN; ++strip ) {
-                // data is packed like this
-                // [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
-	      
-                Int_t RstripPos = GetRStripNumber( strip, it->pos, it->invert );
+			assert(nsamp == N_APV25_CHAN*fMaxSamp);
 
-                fStrip[fNch] = RstripPos;
-		
-		fADCSum[fNch] = 0;
+			Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
 
-                Vflt_t samples;
-                samples.clear();
-		
-                for( UInt_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++ ){
-                    UInt_t isamp = adc_samp*N_APV25_CHAN + strip;
+			Int_t fNchStartOfAPV = fNch;
+			for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
+				// data is packed like this
+				// [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
 
-                    assert(isamp < nsamp);
+				Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
 
-                    Int_t rawadc =  evdata.GetData(it->crate, it->slot, chan, isamp);
-                    frawADC[adc_samp][fNch] = rawadc;
-                    fADCForm[adc_samp][fNch] = rawadc - fPed[RstripPos];
-		    fADCSum[fNch] += fADCForm[adc_samp][fNch];
-                    assert( fNch < fNelem ); 
+				fStrip[fNch] = RstripPos;
 
-                    samples.push_back((Float_t) rawadc);
-		    // Note fMPDmap.size() equals to Number of APV Cards
-                }
+				fADCSum[fNch] = 0;
 
-                MPDStripData_t stripdata = ChargeDep(samples);
+				Vflt_t samples;
+				samples.clear();
 
-		// copy adc sum and its fNCH
-		arrADCSum[strip] = fADCSum[fNch];
+				for (UInt_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+					UInt_t isamp = adc_samp * N_APV25_CHAN + strip;
 
-                ++fNrawStrips;
-                ++fNhitStrips;
+					assert(isamp < nsamp);
 
-                fADCraw[RstripPos]  = stripdata.adcraw;
-                fADC[RstripPos]     = stripdata.adc;
-                fHitTime[RstripPos] = stripdata.time;
-                fGoodHit[RstripPos] = stripdata.pass;
+					Int_t rawadc = evdata.GetData(it->crate, it->slot, chan,
+							isamp);
+					frawADC[adc_samp][fNch] = rawadc;
+					fADCForm[adc_samp][fNch] = rawadc - fPed[RstripPos];
+					fADCSum[fNch] += fADCForm[adc_samp][fNch];
+					assert(fNch < fNelem);
 
-                fADCcor[RstripPos]  = stripdata.adc;
+					samples.push_back((Float_t) rawadc);
+					// Note fMPDmap.size() equals to Number of APV Cards
+				}
 
+				MPDStripData_t stripdata = ChargeDep(samples);
 
-                Bool_t isAboveThreshold = fADCForm[2][fNch]/fRMS[RstripPos] > fZeroSuppressRMS;
+				// copy adc sum and its fNCH
+				arrADCSum[strip] = fADCSum[fNch];
 
-                // Zero suppression
-                if( !fZeroSuppress || isAboveThreshold ){
-                    fNch++;
-                }
+				++fNrawStrips;
+				++fNhitStrips;
 
-                if(isAboveThreshold){
-                    fSigStrips.push_back(RstripPos);
-                }
+				fADCraw[RstripPos] = stripdata.adcraw;
+				fADC[RstripPos] = stripdata.adc;
+				fHitTime[RstripPos] = stripdata.time;
+				fGoodHit[RstripPos] = stripdata.pass;
 
-            }// End Strip Loop
+				fADCcor[RstripPos] = stripdata.adc;
 
-	    // Common Mode Calculation starts after strip loop -- TY
-	    // I calculate common mode noise within each APV, that is 128 channels
-	    // Insertion sort arrADCSum
-	    Double_t swap_buff;
-	    for(Int_t i =1; i<N_APV25_CHAN;++i){
-	      swap_buff = arrADCSum[i];
-	      Int_t j = i-1;
-	      while( j>=0 && arrADCSum[j]>swap_buff ){
-		arrADCSum[j+1] = arrADCSum[j];
-		j = j-1;
-	      }
-	      arrADCSum[j+1] = swap_buff;
-	    }
-	    // Average the channels with middle 1/3 signals
-	    Double_t cm_noise = 0;
-	    Int_t n_cutoff = 20 ;
-	    Int_t n_cmn = N_APV25_CHAN - 2*n_cutoff;
-	    for(Int_t strip =n_cutoff; strip< N_APV25_CHAN -n_cutoff ;++strip){
-	      if(arrADCSum[strip+1]<arrADCSum[strip]) // Unless N_CMN_CHAN !=128
-		std::cout << "Sorting went Wrong ! " << std::endl;
-	      cm_noise += arrADCSum[strip];
-	    }
-	    cm_noise = cm_noise/ n_cmn / fMaxSamp; // averaged to each sample
+				Bool_t isAboveThreshold = fADCForm[2][fNch] / fRMS[RstripPos]
+						> fZeroSuppressRMS;
 
-            fDnoise = 0.0;
-            if( TestBit(kDoNoise) ){
-                fDnoise = cm_noise;
-            }
+				// Zero suppression
+				if (!fZeroSuppress || isAboveThreshold) {
+					fNch++;
+				}
 
-            // Correct superclass' variables for common mode noise
-	    for(Int_t strip=0; strip<N_APV25_CHAN;++strip){
-                UInt_t RstripPos = GetRStripNumber( strip, it->pos, it->invert );
-                fADCcor[RstripPos] -= fPed[RstripPos] + fDnoise;
-	    }
+				if (isAboveThreshold) {
+					fSigStrips.push_back(RstripPos);
+				}
 
-            // Correct this class' variables for common mode noise
-	    for(Int_t ch= fNchStartOfAPV; ch < fNch; ch++){
-                for( UInt_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++ ){
-                    fADCForm[adc_samp][ch] -= fDnoise;
-                }
-                fADCSum[fNch] -= fDnoise*fMaxSamp;
+			}                // End Strip Loop
+
+			// Common Mode Calculation starts after strip loop -- TY
+			// I calculate common mode noise within each APV, that is 128 channels
+			// Insertion sort arrADCSum
+			Double_t swap_buff;
+			for (Int_t i = 1; i < N_APV25_CHAN; ++i) {
+				swap_buff = arrADCSum[i];
+				Int_t j = i - 1;
+				while (j >= 0 && arrADCSum[j] > swap_buff) {
+					arrADCSum[j + 1] = arrADCSum[j];
+					j = j - 1;
+				}
+				arrADCSum[j + 1] = swap_buff;
+			}
+			// Average the channels with middle 1/3 signals
+			Double_t cm_noise = 0;
+			Int_t n_cutoff = 20;
+			Int_t n_cmn = N_APV25_CHAN - 2 * n_cutoff;
+			for (Int_t strip = n_cutoff; strip < N_APV25_CHAN - n_cutoff;
+					++strip) {
+				if (arrADCSum[strip + 1] < arrADCSum[strip]) // Unless N_CMN_CHAN !=128
+					std::cout << "Sorting went Wrong ! " << std::endl;
+				cm_noise += arrADCSum[strip];
+			}
+			cm_noise = cm_noise / n_cmn / fMaxSamp; // averaged to each sample
+
+			fDnoise = 0.0;
+			if (TestBit(kDoNoise)) {
+				fDnoise = cm_noise;
+			}
+
+			// Correct superclass' variables for common mode noise
+			for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
+				UInt_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
+				fADCcor[RstripPos] -= fPed[RstripPos] + fDnoise;
+			}
+
+			// Correct this class' variables for common mode noise
+			for (Int_t ch = fNchStartOfAPV; ch < fNch; ch++) {
+				for (UInt_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+					fADCForm[adc_samp][ch] -= fDnoise;
+				}
+				fADCSum[fNch] -= fDnoise * fMaxSamp;
             }
 
         }// End ichan loop: fNchan = total APVs 
