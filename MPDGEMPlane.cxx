@@ -303,7 +303,7 @@ void MPDGEMPlane::Clear( Option_t* opt ){
 }
 
 Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
-//    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
+    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
     fNch = 0;
     for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
