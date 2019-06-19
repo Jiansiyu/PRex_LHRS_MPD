@@ -54,7 +54,7 @@ void replay(){
   std::cout<<"enter file name: "<<std::endl;
   cin>>argc;
   //argc = 409;
-  THaRun* run = new THaRun(Form("/adaq1/data1/prexLHRS_%d.dat.0",argc));
+  THaRun* run = new THaRun(Form("/adaq1/data1/prexRHRS_%d.dat.0",argc));
   run->SetLastEvent(-1);
 
   run->SetDataRequired(0);

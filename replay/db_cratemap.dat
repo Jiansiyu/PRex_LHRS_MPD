@@ -1,1 +1,6 @@
-../DB/db_cratemap.dat
+==== Crate 20 type vme Bank Decoding
+# slot  model   bank
+    0     3561    3561
+#   10     3561    3561
+#   0     3561    10
+#
