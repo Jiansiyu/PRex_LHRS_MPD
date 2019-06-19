@@ -3,6 +3,7 @@
 #include "TDatime.h"
 #include "THaEvData.h"
 #include <vector>
+#include <numeric>
 
 #include "GEMHit.h"
 
@@ -19,7 +20,7 @@ MPDGEMPlane::MPDGEMPlane( const char *name, const char *description,
     trigger_time(-1),ev_num(-1)
 
 {
-    fZeroSuppress    = kFALSE;
+    fZeroSuppress    = kTRUE;
     fZeroSuppressRMS = 5.0;
 
     fMaxSamp = N_MPD_TIME_SAMP;
@@ -304,7 +305,7 @@ void MPDGEMPlane::Clear( Option_t* opt ){
 
 Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
-    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
+    //std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
 	fNch = 0;
 	for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin();
@@ -325,7 +326,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 		Int_t fNchan = evdata.GetNumChan(it->crate, it->slot);
 
-		printf("fNchan = %d\n", fNchan);
+		//printf("fNchan = %d\n", fNchan);
 
 		for (Int_t ichan = 0; ichan < fNchan; ++ichan) {
 			Int_t chan = evdata.GetNextChan(it->crate, it->slot, ichan);
@@ -334,16 +335,140 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 			UInt_t nsamp = evdata.GetNumHits(it->crate, it->slot, chan);
 
-			std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id
-					<< " found " << nsamp << std::endl;
-			std::cout << nsamp << " samples detected (" << nsamp / N_APV25_CHAN
-					<< ")" << std::endl;
+//			std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id
+//					<< " found " << nsamp << std::endl;
+//			std::cout << nsamp << " samples detected (" << nsamp / N_APV25_CHAN
+//					<< ")" << std::endl;
+
 
 			assert(nsamp == N_APV25_CHAN*fMaxSamp);
 
 			Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
 
-			Int_t fNchStartOfAPV = fNch;
+			// Get the raw data
+			Int_t fNchStartOfAPV = fNch; // count the number of fired strips
+
+			Int_t rawADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the raw result
+			Int_t ADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the result
+			Int_t ADCBuffSum[N_APV25_CHAN];
+
+			for (int j = 0; j < N_APV25_CHAN; j++) {
+				for (int i = 0; i < fMaxSamp; i++) {
+					rawADCBuff[i][j] = 0;
+					ADCBuff[i][i] = 0;
+					ADCBuffSum[j] = 0;
+				}
+
+			}
+			for (uint8_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+				// calculate the common mode
+				// data is packed like this
+				// [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
+				std::vector<Int_t> rawBuf;
+				for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
+					UInt_t isamp = adc_samp * N_APV25_CHAN + strip;
+					assert(isamp < nsamp);
+
+					Int_t rawadc = evdata.GetData(it->crate, it->slot, chan,
+							isamp);
+					rawBuf.push_back(rawadc);
+				}
+				// calculate the CM
+				std::sort(rawBuf.begin(), rawBuf.end());
+
+				// get a sub-vector of the vector
+				const std::vector<Int_t> cmVect(rawBuf.begin() + 20,
+						rawBuf.end() - 20);
+
+				auto tsCommonMode = std::accumulate(cmVect.begin(),
+						cmVect.end(), 0.0) / cmVect.size();
+
+				// subtract the common mode from the raw data
+				for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
+					UInt_t isamp = adc_samp * N_APV25_CHAN + strip;
+					assert(isamp < nsamp);
+
+					// get the phys pos
+					Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
+
+					Int_t rawadc = evdata.GetData(it->crate, it->slot, chan,
+							isamp);
+
+					rawADCBuff[adc_samp][strip]=rawadc;
+					ADCBuff[adc_samp][strip]=rawadc - tsCommonMode - fPed[RstripPos];
+					ADCBuffSum[strip]=ADCBuffSum[strip]+ADCBuff[adc_samp][strip];
+
+					fADCcor[RstripPos]=tsCommonMode + fPed[RstripPos];   // why this over writed
+				} // end of loop on the 128 channels
+
+
+			} // end of loop on the Time samples
+
+			//zero suppression
+
+			for(auto strip = 0; strip < N_APV25_CHAN; ++strip){
+				Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
+
+				Bool_t isAboveThreshold = (float)((Int_t)ADCBuffSum[strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
+
+//				std::cout << "[Debug]::" << __FUNCTION__ << "/" << __LINE__
+//						<< " -> " << " rms: " << fZeroSuppressRMS
+//						<< "  zero enabled:" << fZeroSuppress << "  rms:"
+//						<< fRMS[RstripPos] << std::endl;
+
+
+				Vflt_t samples;
+				samples.clear();
+
+				for (auto adc_samp=0; adc_samp<fMaxSamp;adc_samp++){
+
+					frawADC[adc_samp][fNch]=rawADCBuff[adc_samp][strip];
+					fADCForm[adc_samp][fNch]=ADCBuff[adc_samp][strip];
+
+					samples.push_back((float_t)ADCBuff[adc_samp][strip]);
+				}
+
+				//Comments: change the value to be the net charge, need to confirm with Seamus
+				//Does it need to be the 'signal', noise information does not have any meaning full information
+				MPDStripData_t stripdata = ChargeDep(samples);
+				++fNrawStrips;
+				++fNhitStrips;
+				fADCraw[RstripPos] = stripdata.adcraw;
+				fADC[RstripPos] = stripdata.adc;
+				fHitTime[RstripPos] = stripdata.time;
+				fGoodHit[RstripPos] = stripdata.pass;
+
+				//fADCcor[RstripPos] = stripdata.adc;
+
+				if (isAboveThreshold) {
+
+					fSigStrips.push_back(RstripPos);
+
+//					std::cout << "[Debug]::" << __FUNCTION__ << "/" << __LINE__
+//							<< " -> " << " rms: " << fZeroSuppressRMS
+//							<< "  zero enabled:" << fZeroSuppress << "  rms:"
+//							<< fRMS[RstripPos] << std::endl;
+//					std::cout << "[Debug]::" << __FUNCTION__ << "/" << __LINE__
+//							<< " -> " << "Selected Position:" << RstripPos
+//							<< " adc_value: (" << fADCForm[0][fNch] << ", "
+//							<< fADCForm[2][fNch] << ", " << fADCForm[3][fNch] << "),  "
+//							<< std::endl<< std::endl;
+//					getchar();
+
+				}
+
+				if(!fZeroSuppress || isAboveThreshold){
+					fNch++;
+				}
+			}
+
+			// why this over writed
+			// Correct superclass' variables for common mode noise
+
+/*
+			//------------------------------------------
+
+			//Int_t fNchStartOfAPV = fNch; // count the number of fired strips
 			for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
 				// data is packed like this
 				// [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
@@ -376,7 +501,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					// Note fMPDmap.size() equals to Number of APV Cards
 				}
 
-				MPDStripData_t stripdata = ChargeDep(samples);
+				MPDStripData_t stripdata = ChargeDep(samples);   // Comment: Is this using the APV fit function to get the time ect. I think this vulaue should be pure result after the common mode sup and the pdestal sup
 
 				// copy adc sum and its fNCH
 				arrADCSum[strip] = fADCSum[fNch];
@@ -389,7 +514,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				fHitTime[RstripPos] = stripdata.time;
 				fGoodHit[RstripPos] = stripdata.pass;
 
-				fADCcor[RstripPos] = stripdata.adc;
+				fADCcor[RstripPos] = stripdata.adc;   // overwrited
 
 				Bool_t isAboveThreshold = fADCForm[2][fNch] / fRMS[RstripPos]
 						> fZeroSuppressRMS;
@@ -399,6 +524,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					fNch++;
 				}
 
+				//need to the common mode subtraction before the zero suppression
 				if (isAboveThreshold) {
 					fSigStrips.push_back(RstripPos);
 				}
@@ -418,6 +544,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				}
 				arrADCSum[j + 1] = swap_buff;
 			}
+
+
 			// Average the channels with middle 1/3 signals
 			Double_t cm_noise = 0;
 			Int_t n_cutoff = 20;
@@ -429,6 +557,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				cm_noise += arrADCSum[strip];
 			}
 			cm_noise = cm_noise / n_cmn / fMaxSamp; // averaged to each sample
+
+			// what is the meaning of those variable
 
 			fDnoise = 0.0;
 			if (TestBit(kDoNoise)) {
@@ -448,6 +578,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				}
 				fADCSum[fNch] -= fDnoise * fMaxSamp;
             }
+		//----------------------------------------
+			*/
 
         }// End ichan loop: fNchan = total APVs 
 
@@ -590,6 +722,7 @@ Int_t MPDGEMPlane::FindGEMHits(){
             assert( *cur >= *start );
         }
         assert( size > 0 );
+
         // Compute weighted position average. Again, a crude (but fast) substitute
         // for fitting the centroid of the peak.
         Double_t xsum = 0.0, adcsum = 0.0;
@@ -600,6 +733,7 @@ Int_t MPDGEMPlane::FindGEMHits(){
             xsum   += pos * adc;
             adcsum += adc;
         }
+
         assert( adcsum > 0.0 );
         Double_t pos = xsum/adcsum;
 
