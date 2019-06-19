@@ -366,7 +366,9 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 							isamp);
 					frawADC[adc_samp][fNch] = rawadc;
 					fADCForm[adc_samp][fNch] = rawadc - fPed[RstripPos];
-					std::cout<<"Test ["<<__FUNCTION__<<" /"<<__LINE__<<"]  Position:"<<RstripPos<<"  Ped:"<< fPed[RstripPos]<<std::endl;
+
+					std::cout<<"Test ["<<__FUNCTION__<<" /"<<__LINE__<<"] Det: "<<fName<< " Position:"<<RstripPos<<"  Ped:"<< fPed[RstripPos]<<std::endl;
+
 					fADCSum[fNch] += fADCForm[adc_samp][fNch];
 					assert(fNch < fNelem);
 
