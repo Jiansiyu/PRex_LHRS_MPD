@@ -320,7 +320,7 @@ void MPDGEMPlane::Clear( Option_t* opt ){
 }
 
 Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
-//    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
+    std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
     fNch = 0;
     for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it)
@@ -398,7 +398,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
                 fADC[RstripPos]     = stripdata.adc;
                 fHitTime[RstripPos] = stripdata.time;
                 fGoodHit[RstripPos] = stripdata.pass;
-
                 fADCcor[RstripPos]  = stripdata.adc;
 
 
@@ -412,7 +411,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
                 if(isAboveThreshold){
                     fSigStrips.push_back(RstripPos);
                 }
-
             }// End Strip Loop
 
 	    // Common Mode Calculation starts after strip loop -- TY

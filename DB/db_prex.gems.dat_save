@@ -92,7 +92,7 @@ prex.gems.y1.maxsamp = 3
 prex.gems.y1.do_noise = 1
 
 prex.gems.x2.partner = y2
-prex.gems.x2.position = 0.0 0.0 0.1
+prex.gems.x2.position = -2.7e-4 -1.6e-4 0.203
 prex.gems.x2.size     = 0.1 0.2 0.001
 prex.gems.x2.nstrips = 512
 prex.gems.x2.strip.pos = -0.1
@@ -111,7 +111,7 @@ prex.gems.x2.chanmap = \
 
 prex.gems.y2.partner = x2
 prex.gems.y2.type = y
-prex.gems.y2.position = 0.0 0.0 0.1
+prex.gems.y2.position = -2.7e-4 -1.6e-4 0.203
 prex.gems.y2.size     = 0.1 0.2 0.001
 prex.gems.y2.nstrips = 256
 prex.gems.y2.strip.pos = -0.05
@@ -128,7 +128,7 @@ prex.gems.y2.chanmap = \
 
 prex.gems.x3.partner = y3
 prex.gems.x3.type = x
-prex.gems.x3.position = 0.0 0.0 0.2
+prex.gems.x3.position = -1.49e-3 5.2e-4 0.374
 prex.gems.x3.size     = 0.1 0.2 0.001
 prex.gems.x3.nstrip = 512
 prex.gems.x3.strip.pos = -0.1
@@ -146,7 +146,7 @@ prex.gems.x3.chanmap = \
 
 prex.gems.y3.partner = x3
 prex.gems.y3.type = y
-prex.gems.y3.position = 0.0 0.0 0.2
+prex.gems.y3.position = -1.49e-3 5.2e-4 0.374
 prex.gems.y3.size     = 0.1 0.2 0.001
 prex.gems.y3.nstrip = 256
 prex.gems.y3.strip.pos = -0.05
@@ -163,7 +163,7 @@ prex.gems.y3.chanmap = \
 
 prex.gems.x4.partner = y4
 prex.gems.x4.type = x
-prex.gems.x4.position = 0.0 0.0 0.4
+prex.gems.x4.position = -1.49e-3 5.2e-4 0.374
 prex.gems.x4.size     = 0.1 0.2 0.001
 prex.gems.x4.nstrip = 1536
 prex.gems.x4.strip.pos = -0.1
@@ -189,7 +189,7 @@ prex.gems.x4.chanmap = \
 
 prex.gems.y4.partner = x4
 prex.gems.y4.type = y
-prex.gems.y4.position = 0.0 0.0 0.4
+prex.gems.y4.position = -1.49e-3 5.2e-4 0.374
 prex.gems.y4.size     = 0.1 0.2 0.001
 prex.gems.y4.nstrip = 1280
 prex.gems.y4.strip.pos = -0.1
@@ -213,7 +213,7 @@ prex.gems.y4.chanmap = \
 
 prex.gems.x5.partner = y5
 prex.gems.x5.type = x
-prex.gems.x5.position = 0.0 0.0 0.5
+prex.gems.x5.position = -1.49e-3 5.2e-4 0.374
 prex.gems.x5.size     = 0.1 0.2 0.001
 prex.gems.x5.nstrip = 1536
 prex.gems.x5.strip.pos = -0.1
@@ -239,7 +239,7 @@ prex.gems.x5.chanmap = \
 
 prex.gems.y5.partner = x5
 prex.gems.y5.type = y
-prex.gems.y5.position = 0.0 0.0 0.5
+prex.gems.y5.position = -1.49e-3 5.2e-4 0.374
 prex.gems.y5.size     = 0.1 0.2 0.001
 prex.gems.y5.nstrip = 1280
 prex.gems.y5.strip.pos = -0.1
@@ -263,7 +263,7 @@ prex.gems.y5.chanmap = \
 
 prex.gems.x6.partner = y6
 prex.gems.x6.type = x
-prex.gems.x6.position = 0.0 0.0 0.6
+prex.gems.x6.position = -1.49e-3 5.2e-4 0.374
 prex.gems.x6.size     = 0.1 0.2 0.001
 prex.gems.x6.nstrip = 1536
 prex.gems.x6.strip.pos = -0.1
@@ -289,7 +289,7 @@ prex.gems.x6.chanmap = \
 
 prex.gems.y6.partner = x6
 prex.gems.y6.type = y
-prex.gems.y6.position = 0.0 0.0 0.6
+prex.gems.y6.position = -1.49e-3 5.2e-4 0.374
 prex.gems.y6.size     = 0.1 0.2 0.001
 prex.gems.y6.nstrip = 1280
 prex.gems.y6.strip.pos = -0.1
