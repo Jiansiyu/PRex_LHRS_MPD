@@ -441,8 +441,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					fGoodHit[RstripPos] = stripdata.pass;
 
 					fADCcor[RstripPos] = stripdata.adc;
-					// NO reason. need to change
-					if(stripdata.adc<=0)fADCcor[RstripPos]=100;
+
 					//std::cout<<" fadcOriginCheck:: position:"<<RstripPos<<"  value:"<<fADCcor[RstripPos]<<std::endl;
 				}
 				if (isAboveThreshold) {
@@ -694,6 +693,7 @@ MPDStripData_t MPDGEMPlane::ChargeDep( const std::vector<Float_t>& amp ) {
     // where A is the amplitude, t0 the begin of the rise, tau1 the time
     // parameter for the rising edge and tau2 the for the falling edge.
 
+/*
     Float_t x = delta_t/Tp;
 
     Float_t w1 = TMath::Exp(x-1)/x;      //1.21306
@@ -708,8 +708,12 @@ MPDStripData_t MPDGEMPlane::ChargeDep( const std::vector<Float_t>& amp ) {
         amp[2]*w1+amp[1]*w2+amp[0]*w3 };
 
 
-    Float_t adc    = delta_t*(sig[0]+sig[1]+sig[2]);
+    Float_t adc    = delta_t*(sig[0]+sig[1]+sig[2]); */
     Float_t time   = 0;     // TODO
+
+
+
+    Float_t adc = amp[0]+amp[1]+amp[2];
 
     Bool_t pass;
     // Calculate ratios for 3 samples and check for bad signals

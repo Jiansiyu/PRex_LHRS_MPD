@@ -40,8 +40,7 @@ prex.gems.3d_maxmiss = 0
 
 prex.gems.x.search_depth = 8
 prex.gems.y.search_depth = 9
-prex.gems.planeconfig = x1 y1 x2 y2 x3 y3 x4 y4 
-#x5 y5 x6 y6
+prex.gems.planeconfig = x1 y1 x2 y2 x3 y3 x4 y4 x5 y5 x6 y6
 prex.gems.mapping = mpd-apv-nossp
 prex.gems.strip.pitch = 0.000400
 prex.gems.maxmiss = 0
