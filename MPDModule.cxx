@@ -164,7 +164,7 @@ namespace Decoder {
                           int x_data = p[jj++];
 
                           data =  x_data& 0x00FFF;
-                          //ch   = (x_data& 0x7F000)>>12;
+                          //auto ch   = (x_data& 0x7F000)>>12;
                           //printf("%3d %03x  ", ch, data);
 
                           // Otherwise we have data
@@ -176,7 +176,7 @@ namespace Decoder {
                           fWordsSeen++;
                           data_count++;
                       }
-                      //printf("\n");
+                      printf("\n");
                   }
 
                   thesewords = p[jj++] & 0x1FFFFF;

@@ -318,11 +318,22 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			it != fMPDmap.end(); ++it) {
 		// Find channel for trigger time first
 		Int_t effChan = it->mpd_id << 5;  // Channel reserved for trigger time
+
+		std::cout<<"[Test Position] "<<__FUNCTION__<<"/"<<__LINE__<<std::endl;
+
+		std::cout<<"crate:"<<it->crate<<" slot:"<<it->slot<<"  MPD:"<<(it->mpd_id)<<" GEM:"<<(it->gem_id)<<" effchan:"<<(it->mpd_id << 5)<<std::endl;
 		ULong_t coarse_time1 = evdata.GetData(it->crate, it->slot, effChan, 0);
+
+		std::cout<<"[Test Position] "<<__FUNCTION__<<"/"<<__LINE__<<std::endl;
 		UInt_t coarse_time2 = evdata.GetData(it->crate, it->slot, effChan, 1);
+
+		std::cout<<"[Test Position] "<<__FUNCTION__<<"/"<<__LINE__<<std::endl;
 		UInt_t fine_time = evdata.GetData(it->crate, it->slot, effChan, 2);
+
+		std::cout<<"[Test Position] "<<__FUNCTION__<<"/"<<__LINE__<<std::endl;
 		trigger_time = ((coarse_time1 << 20) | coarse_time2) + fine_time / 6.0;
 
+		std::cout<<"[Test Position] "<<__FUNCTION__<<"/"<<__LINE__<<std::endl;
 		effChan = it->mpd_id << 4;
 		ev_num = evdata.GetData(it->crate, it->slot, effChan, 0);
 
