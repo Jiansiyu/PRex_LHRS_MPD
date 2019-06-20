@@ -457,23 +457,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
         }// End ichan loop: fNchan = total APVs 
 
-//		if (fNch >= 1) {
-//			std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
-//					<< "  fired strips:" << fNch << " MPD:" << it->mpd_id
-//					<< " ADC" << it->adc_id << std::endl;
-//
-//			for (int i = 0; i < fNch; i++) {
-//			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][i]<<","<<
-//					frawADC[1][i]<<","<<
-//					frawADC[2][i]<<")   ADC("<<
-//					fADCForm[0][i]<<","<<
-//					fADCForm[1][i]<<","<<
-//					fADCForm[2][i]<<")"<<
-//					fADCcor[fSigStrips[i]]<<
-//					std::endl;
-//
-//			}
-//		}
 	}
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
