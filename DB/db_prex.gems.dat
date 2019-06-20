@@ -92,7 +92,7 @@ prex.gems.y1.maxsamp = 3
 prex.gems.y1.do_noise = 1
 
 prex.gems.x2.partner = y2
-prex.gems.x2.position = 0.0 0.0 0.1
+prex.gems.x2.position = -2.7e-4 -1.6e-4 0.6858
 prex.gems.x2.size     = 0.1 0.2 0.001
 prex.gems.x2.nstrips = 512
 prex.gems.x2.strip.pos = -0.1
@@ -111,7 +111,7 @@ prex.gems.x2.chanmap = \
 
 prex.gems.y2.partner = x2
 prex.gems.y2.type = y
-prex.gems.y2.position = 0.0 0.0 0.1
+prex.gems.y2.position = -2.7e-4 -1.6e-4 0.6858
 prex.gems.y2.size     = 0.1 0.2 0.001
 prex.gems.y2.nstrips = 256
 prex.gems.y2.strip.pos = -0.05
@@ -128,7 +128,7 @@ prex.gems.y2.chanmap = \
 
 prex.gems.x3.partner = y3
 prex.gems.x3.type = x
-prex.gems.x3.position = 0.0 0.0 0.2
+prex.gems.x3.position = -1.49e-3 5.2e-4 0.889
 prex.gems.x3.size     = 0.1 0.2 0.001
 prex.gems.x3.nstrip = 512
 prex.gems.x3.strip.pos = -0.1
@@ -146,7 +146,7 @@ prex.gems.x3.chanmap = \
 
 prex.gems.y3.partner = x3
 prex.gems.y3.type = y
-prex.gems.y3.position = 0.0 0.0 0.2
+prex.gems.y3.position = -1.49e-3 5.2e-4 0.889
 prex.gems.y3.size     = 0.1 0.2 0.001
 prex.gems.y3.nstrip = 256
 prex.gems.y3.strip.pos = -0.05
@@ -163,16 +163,17 @@ prex.gems.y3.chanmap = \
 
 prex.gems.x4.partner = y4
 prex.gems.x4.type = x
-prex.gems.x4.position = 0.0 0.0 0.4
+prex.gems.x4.position = -1.49e-3 5.2e-4 1.104
 prex.gems.x4.size     = 0.1 0.2 0.001
 prex.gems.x4.nstrip = 1536
-prex.gems.x4.strip.pos = -0.1
+prex.gems.x4.strip.pos = -0.3
 prex.gems.x4.maxsamp = 3
 prex.gems.x4.do_noise = 1
 
 prex.gems.x4.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.x4.chanmap = \
 20 0 17 3  0 15  0 1 \
 20 0 17 3  1 14  1 1 \
@@ -189,16 +190,17 @@ prex.gems.x4.chanmap = \
 
 prex.gems.y4.partner = x4
 prex.gems.y4.type = y
-prex.gems.y4.position = 0.0 0.0 0.4
+prex.gems.y4.position = -1.49e-3 5.2e-4 1.104
 prex.gems.y4.size     = 0.1 0.2 0.001
 prex.gems.y4.nstrip = 1280
-prex.gems.y4.strip.pos = -0.1
+prex.gems.y4.strip.pos = -0.25
 prex.gems.y4.maxsamp = 3
 prex.gems.y4.do_noise = 1
 
 prex.gems.y4.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.y4.chanmap = \
 20 0 13 3 10 20 0 0 \
 20 0 13 3 11 19 1 0 \
@@ -213,16 +215,17 @@ prex.gems.y4.chanmap = \
 
 prex.gems.x5.partner = y5
 prex.gems.x5.type = x
-prex.gems.x5.position = 0.0 0.0 0.5
+prex.gems.x5.position = -1.49e-3 5.2e-4 1.180
 prex.gems.x5.size     = 0.1 0.2 0.001
 prex.gems.x5.nstrip = 1536
-prex.gems.x5.strip.pos = -0.1
+prex.gems.x5.strip.pos = -0.3
 prex.gems.x5.maxsamp = 3
 prex.gems.x5.do_noise = 1
 
 prex.gems.x5.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.x5.chanmap = \
 20 0 16 4  0 15  0 1 \
 20 0 16 4  1 14  1 1 \
@@ -239,16 +242,17 @@ prex.gems.x5.chanmap = \
 
 prex.gems.y5.partner = x5
 prex.gems.y5.type = y
-prex.gems.y5.position = 0.0 0.0 0.5
+prex.gems.y5.position = -1.49e-3 5.2e-4 1.180
 prex.gems.y5.size     = 0.1 0.2 0.001
 prex.gems.y5.nstrip = 1280
-prex.gems.y5.strip.pos = -0.1
+prex.gems.y5.strip.pos = -0.25
 prex.gems.y5.maxsamp = 3
 prex.gems.y5.do_noise = 1
 
 prex.gems.y5.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.y5.chanmap = \
 20 0 13 4 5 12 0 0 \
 20 0 13 4 6 11 1 0 \
@@ -263,16 +267,17 @@ prex.gems.y5.chanmap = \
 
 prex.gems.x6.partner = y6
 prex.gems.x6.type = x
-prex.gems.x6.position = 0.0 0.0 0.6
+prex.gems.x6.position = -1.49e-3 5.2e-4 1.256
 prex.gems.x6.size     = 0.1 0.2 0.001
 prex.gems.x6.nstrip = 1536
-prex.gems.x6.strip.pos = -0.1
+prex.gems.x6.strip.pos = -0.30
 prex.gems.x6.maxsamp = 3
 prex.gems.x6.do_noise = 1
 
 prex.gems.x6.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.x6.chanmap = \
 20 0 15 5  0 15  0 1 \
 20 0 15 5  1 14  1 1 \
@@ -289,16 +294,17 @@ prex.gems.x6.chanmap = \
 
 prex.gems.y6.partner = x6
 prex.gems.y6.type = y
-prex.gems.y6.position = 0.0 0.0 0.6
+prex.gems.y6.position = -1.49e-3 5.2e-4 1.256
 prex.gems.y6.size     = 0.1 0.2 0.001
 prex.gems.y6.nstrip = 1280
-prex.gems.y6.strip.pos = -0.1
+prex.gems.y6.strip.pos = -0.25
 prex.gems.y6.maxsamp = 3
 prex.gems.y6.do_noise = 1
 
 prex.gems.y6.detmap = \
 20 0 0 0
 
+#crate slot mpd_id gem_id adc_id i2c pos invert
 prex.gems.y6.chanmap = \
 20 0 13 5 0 4 0 0 \
 20 0 13 5 1 3 1 0 \
@@ -310,6 +316,7 @@ prex.gems.y6.chanmap = \
 20 0 14 5 2 2 7 1 \
 20 0 14 5 1 3 8 1 \
 20 0 14 5 0 4 9 1
+
 
 prex.gems.x1.ped = \
   510 143.18   478 26.78   446 -40.20   414 -40.77   502 51.78   470 37.65   438 -12.12   406 -32.72   494 61.94   462 26.37 \ 

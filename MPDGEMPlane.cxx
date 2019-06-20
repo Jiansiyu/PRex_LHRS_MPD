@@ -337,10 +337,18 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			Int_t chan = evdata.GetNextChan(it->crate, it->slot, ichan);
 			if (chan != effChan)
 				continue; // not part of this detector
-
 			UInt_t nsamp = evdata.GetNumHits(it->crate, it->slot, chan);
+			if(nsamp != N_APV25_CHAN*fMaxSamp){
 
-			assert(nsamp == N_APV25_CHAN*fMaxSamp);
+				std::cout << "[WORNING]:Crate:" << it->crate << "  slot:"
+						<< it->slot << " Chan:" << chan << "  mpd-"
+						<< it->mpd_id << "  ADC:" << it->adc_id << "  nsamp:"
+						<< nsamp << "  expect:" << N_APV25_CHAN * fMaxSamp
+						<<", ignore this APV card"
+						<< std::endl;
+			continue;
+			//assert(nsamp == N_APV25_CHAN*fMaxSamp);
+			}
 
 			Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
 
@@ -378,14 +386,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				std::sort(rawBuf.begin(), rawBuf.end());
 				assert(rawBuf.size()==N_APV25_CHAN);
 
-				/*float_t tsCommonSum=0;
-				int16_t counter=0;
-				for(int i=20;i<rawBuf.size()-20;i++){
-					tsCommonSum+=rawBuf.at(i);
-					counter++;
-				}
-				std::cout<<"calculate common: "<< tsCommonSum/counter;
-				*/
 				// get a sub-vector of the vector
 
 				const std::vector<Int_t> cmVect(rawBuf.begin() + 20,
