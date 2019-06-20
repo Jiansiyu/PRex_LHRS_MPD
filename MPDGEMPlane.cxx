@@ -315,12 +315,12 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 	// used for debug perpose
 
-	TCanvas *c=new TCanvas("Test","Test",1000,1000);
 
 	std::map<int,float> _rawHistoBuf;
 	std::map<int,float> _cmSupHistoBuf;
 	std::map<int,float> _pedSupHistoBuf;
 	std::map<int,float> _zeroSupHistoBuf;
+	Bool_t _above_th=kFALSE;
 
 	fNch = 0;
 	for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin();
@@ -418,7 +418,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			for(auto strip = 0; strip < N_APV25_CHAN; ++strip){
 				Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
 
-				Bool_t isAboveThreshold = (float)(ADCBuff[1][strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
+				Bool_t isAboveThreshold = (float)(ADCBuffSum[strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
 
 				_rawHistoBuf[RstripPos]=(rawADCBuff[0][strip]+rawADCBuff[1][strip]+rawADCBuff[2][strip])/3.0;
 				_cmSupHistoBuf[RstripPos]=(cmSupADCBuff[0][strip]+cmSupADCBuff[1][strip]+cmSupADCBuff[2][strip])/3.0;
@@ -426,7 +426,9 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 				if(isAboveThreshold){
 					_zeroSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
+					_above_th=kTRUE;
 				}
+				std::cout<<"\n Check Above TH:  plane:"<< fName.Data()<<" Pos:"<< RstripPos <<"  ADC value:"<<ADCBuff[1][strip]<<"  rms: "<<fRMS[RstripPos]<<std::endl;
 
 
 				Vflt_t samples;
@@ -466,25 +468,27 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
         }// End ichan loop: fNchan = total APVs 
 
-		std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
-				<< "  fired strips:" << fNch<<" MPD:"<<it->mpd_id<<" ADC"<<it->adc_id<< std::endl;
-		for (int i = 0; i < fNch; i++) {
-			// raw adc
-			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][fSigStrips[i]]<<","<<
-					frawADC[1][fSigStrips[i]]<<","<<
-					frawADC[2][fSigStrips[i]]<<")   ADC("<<
-					fADCForm[0][fSigStrips[i]]<<","<<
-					fADCForm[1][fSigStrips[i]]<<","<<
-					fADCForm[2][fSigStrips[i]]<<")"<<
-					fADCcor[fSigStrips[i]]<<
-					std::endl;
-
-		}
+//		std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
+//				<< "  fired strips:" << fNch<<" MPD:"<<it->mpd_id<<" ADC"<<it->adc_id<< std::endl;
+//		for (int i = 0; i < fNch; i++) {
+//			// raw adc
+//			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][fSigStrips[i]]<<","<<
+//					frawADC[1][fSigStrips[i]]<<","<<
+//					frawADC[2][fSigStrips[i]]<<")   ADC("<<
+//					fADCForm[0][fSigStrips[i]]<<","<<
+//					fADCForm[1][fSigStrips[i]]<<","<<
+//					fADCForm[2][fSigStrips[i]]<<")"<<
+//					fADCcor[fSigStrips[i]]<<
+//					std::endl;
+//
+//		}
     }
 
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
 
+if(_above_th){
+	TCanvas *c=new TCanvas(Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
 
 	TH1F *rawHisto=new TH1F(Form("%s_raw_histo",fName.Data()),Form("%s_raw_histo",fName.Data()),600,0,600);
 	TH1F *cmSupHisto=new TH1F(Form("Test_commonSup_histo"),Form("Test_commonSup_histo"),600,0,600);
@@ -493,7 +497,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 
 	for (auto iter=_rawHistoBuf.begin();iter!=_rawHistoBuf.end();iter++){
-		std::cout<<"Pos"<<iter->first<<"  adc:"<<iter->second<<std::endl;
+		//std::cout<<"Pos"<<iter->first<<"  adc:"<<iter->second<<std::endl;
 		rawHisto->Fill(iter->first,iter->second);
 	}
 
@@ -506,7 +510,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 	for (auto iter=_zeroSupHistoBuf.begin();iter!=_zeroSupHistoBuf.end();iter++){
 		zeroSupHisto->Fill(iter->first,iter->second);
 		}
-    //
+
     c->Divide(1,4);
     c->cd(1);
     rawHisto->Draw("histo");
@@ -516,15 +520,17 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
     pedSupHisto->Draw("histo");
     c->cd(4);
     zeroSupHisto->Draw("histo");
-    c->Modified();
-    c->Update();
     c->Draw();
+    c->Update();
+    c->Modified();
     getchar();
 
     rawHisto->Delete();
     cmSupHisto->Delete();
     pedSupHisto->Delete();
     zeroSupHisto->Delete();
+//    c->Delete();
+}
 
     return FindGEMHits();
 }
