@@ -320,6 +320,9 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 	std::map<int,float> _cmSupHistoBuf;
 	std::map<int,float> _pedSupHistoBuf;
 	std::map<int,float> _zeroSupHistoBuf;
+	std::map<int,float> _pedestalHistoBuf;
+	std::map<int,float> _rmsHistoBuf;
+
 	Bool_t _above_th=kFALSE;
 
 	fNch = 0;
@@ -409,6 +412,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					cmSupADCBuff[adc_samp][strip]=rawadc - tsCommonMode;
 					ADCBuff[adc_samp][strip]=rawadc - tsCommonMode - fPed[RstripPos];
 					ADCBuffSum[strip]=ADCBuffSum[strip]+ADCBuff[adc_samp][strip];
+
 				} // end of loop on the 128 channels
 
 			} // end of loop on the Time samples
@@ -423,6 +427,8 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				_rawHistoBuf[RstripPos]=(rawADCBuff[0][strip]+rawADCBuff[1][strip]+rawADCBuff[2][strip])/3.0;
 				_cmSupHistoBuf[RstripPos]=(cmSupADCBuff[0][strip]+cmSupADCBuff[1][strip]+cmSupADCBuff[2][strip])/3.0;
 				_pedSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
+				_rmsHistoBuf[RstripPos]=fRMS[RstripPos];
+				_pedestalHistoBuf[RstripPos]=fPed[RstripPos];
 
 				if(isAboveThreshold){
 					_zeroSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
@@ -487,6 +493,27 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
 
+    TCanvas *cped=new TCanvas(Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
+    TH1F *pedestalHisto=new TH1F(Form("Test_Pedestal_histo"),Form("Test_Pedestal_histo"),600,0,600);
+    TH1F *rmsHisto=new TH1F(Form("Test_Pedestal_rms_histo"),Form("Test_Pedestal_rms_histo"),600,0,600);
+
+    for (auto iter=_pedestalHistoBuf.begin();iter!=_pedestalHistoBuf.end();iter++){
+    		pedestalHisto->Fill(iter->first,iter->second);
+    	}
+    for (auto iter=_rmsHistoBuf.begin();iter!=_rmsHistoBuf.end();iter++){
+    		rmsHisto->Fill(iter->first,iter->second);
+    	}
+
+    cped->Divide(1,2);
+    cped->cd(1);
+    pedestalHisto->Draw("HISTO");
+    cped->cd(2);
+    rmsHisto->Draw("HISTO");
+    cped->Draw();
+    cped->Update();
+    getchar();
+
+/*
 if(_above_th){
 	TCanvas *c=new TCanvas(Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
 
@@ -494,6 +521,8 @@ if(_above_th){
 	TH1F *cmSupHisto=new TH1F(Form("Test_commonSup_histo"),Form("Test_commonSup_histo"),600,0,600);
 	TH1F *pedSupHisto=new TH1F(Form("Test_pedSup_histo"),Form("Test_pedSup_histo"),600,0,600);
 	TH1F *zeroSupHisto=new TH1F(Form("Test_zeroSup_histo"),Form("Test_zeroSup_histo"),600,0,600);
+
+
 
 
 	for (auto iter=_rawHistoBuf.begin();iter!=_rawHistoBuf.end();iter++){
@@ -511,6 +540,9 @@ if(_above_th){
 		zeroSupHisto->Fill(iter->first,iter->second);
 		}
 
+
+
+
     c->Divide(1,4);
     c->cd(1);
     rawHisto->Draw("histo");
@@ -523,6 +555,7 @@ if(_above_th){
     c->Draw();
     c->Update();
     c->Modified();
+
     getchar();
 
     rawHisto->Delete();
@@ -531,7 +564,7 @@ if(_above_th){
     zeroSupHisto->Delete();
 //    c->Delete();
 }
-
+*/
     return FindGEMHits();
 }
 
