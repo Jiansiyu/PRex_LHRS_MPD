@@ -417,7 +417,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			for(auto strip = 0; strip < N_APV25_CHAN; ++strip){
 				Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
 
-				Bool_t isAboveThreshold = (float)(ADCBuff[1][strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
+				Bool_t isAboveThreshold = (float)(ADCBuffSum[strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
 
 				Vflt_t samples;
 				samples.clear();
