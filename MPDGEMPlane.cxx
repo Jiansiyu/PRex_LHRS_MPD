@@ -313,15 +313,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
     //std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
-	// used for debug perpose
-
-	TCanvas *c=new TCanvas("Test","Test",1000,1000);
-
-	std::map<int,float> _rawHistoBuf;
-	std::map<int,float> _cmSupHistoBuf;
-	std::map<int,float> _pedSupHistoBuf;
-	std::map<int,float> _zeroSupHistoBuf;
-
 	fNch = 0;
 	for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin();
 			it != fMPDmap.end(); ++it) {
@@ -341,7 +332,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 		Int_t fNchan = evdata.GetNumChan(it->crate, it->slot);
 
-
+		// decode the data for this crate/slot
 		for (Int_t ichan = 0; ichan < fNchan; ++ichan) {
 			Int_t chan = evdata.GetNextChan(it->crate, it->slot, ichan);
 			if (chan != effChan)
@@ -357,37 +348,46 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			Int_t fNchStartOfAPV = fNch; // count the number of fired strips
 
 			Int_t rawADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the raw result
-
-			// temporary usage
-			Int_t cmSupADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the raw result
-
 			Int_t ADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the result
 			Int_t ADCBuffSum[N_APV25_CHAN];
+
 			for (int j = 0; j < N_APV25_CHAN; j++) {
 				for (int i = 0; i < fMaxSamp; i++) {
 					rawADCBuff[i][j] = 0;
 					ADCBuff[i][i] = 0;
-					ADCBuffSum[j] = 0;
 				}
-
+				ADCBuffSum[j] = 0;
 			}
+
 			for (uint8_t adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
 				// calculate the common mode
 				// data is packed like this
 				// [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
 				std::vector<Int_t> rawBuf;
 				for (Int_t strip = 0; strip < N_APV25_CHAN; ++strip) {
+
 					UInt_t isamp = adc_samp * N_APV25_CHAN + strip;
 					assert(isamp < nsamp);
 
 					Int_t rawadc = evdata.GetData(it->crate, it->slot, chan,
 							isamp);
 					rawBuf.push_back(rawadc);
+					assert(rawadc < 4096);
 				}
 				// calculate the CM
 				std::sort(rawBuf.begin(), rawBuf.end());
+				assert(rawBuf.size()==N_APV25_CHAN);
 
+				/*float_t tsCommonSum=0;
+				int16_t counter=0;
+				for(int i=20;i<rawBuf.size()-20;i++){
+					tsCommonSum+=rawBuf.at(i);
+					counter++;
+				}
+				std::cout<<"calculate common: "<< tsCommonSum/counter;
+				*/
 				// get a sub-vector of the vector
+
 				const std::vector<Int_t> cmVect(rawBuf.begin() + 20,
 						rawBuf.end() - 20);
 
@@ -406,54 +406,45 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 							isamp);
 
 					rawADCBuff[adc_samp][strip]=rawadc;
-					cmSupADCBuff[adc_samp][strip]=rawadc - tsCommonMode;
 					ADCBuff[adc_samp][strip]=rawadc - tsCommonMode - fPed[RstripPos];
 					ADCBuffSum[strip]=ADCBuffSum[strip]+ADCBuff[adc_samp][strip];
+
 				} // end of loop on the 128 channels
 
 			} // end of loop on the Time samples
 
 			//zero suppression
-
 			for(auto strip = 0; strip < N_APV25_CHAN; ++strip){
 				Int_t RstripPos = GetRStripNumber(strip, it->pos, it->invert);
 
 				Bool_t isAboveThreshold = (float)(ADCBuff[1][strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
 
-				_rawHistoBuf[RstripPos]=(rawADCBuff[0][strip]+rawADCBuff[1][strip]+rawADCBuff[2][strip])/3.0;
-				_cmSupHistoBuf[RstripPos]=(cmSupADCBuff[0][strip]+cmSupADCBuff[1][strip]+cmSupADCBuff[2][strip])/3.0;
-				_pedSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
-
-				if(isAboveThreshold){
-					_zeroSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
-				}
-
-
 				Vflt_t samples;
 				samples.clear();
 
-				for (auto adc_samp=0; adc_samp<fMaxSamp;adc_samp++){
+				if (isAboveThreshold) {
+					for (auto adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
 
-					frawADC[adc_samp][fNch]=rawADCBuff[adc_samp][strip];
-					fADCForm[adc_samp][fNch]=ADCBuff[adc_samp][strip];
+						frawADC[adc_samp][fNch] = rawADCBuff[adc_samp][strip];
+						fADCForm[adc_samp][fNch] = ADCBuff[adc_samp][strip];
+						samples.push_back((float_t) ADCBuff[adc_samp][strip]);
+					}
+					//Comments: change the value to be the net charge, need to confirm with Seamus
+					//Does it need to be the 'signal', noise information does not have any meaning full information
+					MPDStripData_t stripdata = ChargeDep(samples);
+					++fNrawStrips;
+					++fNhitStrips;
 
-					samples.push_back((float_t)ADCBuff[adc_samp][strip]);
+					fADCraw[RstripPos] = stripdata.adcraw;
+					fADC[RstripPos] = stripdata.adc;
+					fHitTime[RstripPos] = stripdata.time;
+					fGoodHit[RstripPos] = stripdata.pass;
 
+					fADCcor[RstripPos] = stripdata.adc;
+					// NO reason. need to change
+					if(stripdata.adc<=0)fADCcor[RstripPos]=100;
+					//std::cout<<" fadcOriginCheck:: position:"<<RstripPos<<"  value:"<<fADCcor[RstripPos]<<std::endl;
 				}
-
-				//Comments: change the value to be the net charge, need to confirm with Seamus
-				//Does it need to be the 'signal', noise information does not have any meaning full information
-				MPDStripData_t stripdata = ChargeDep(samples);
-				++fNrawStrips;
-				++fNhitStrips;
-
-				fADCraw[RstripPos] = stripdata.adcraw;
-				fADC[RstripPos] = stripdata.adc;
-				fHitTime[RstripPos] = stripdata.time;
-				fGoodHit[RstripPos] = stripdata.pass;
-
-				fADCcor[RstripPos] = stripdata.adc;
-
 				if (isAboveThreshold) {
 
 					fSigStrips.push_back(RstripPos);
@@ -466,65 +457,27 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
         }// End ichan loop: fNchan = total APVs 
 
-		std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
-				<< "  fired strips:" << fNch<<" MPD:"<<it->mpd_id<<" ADC"<<it->adc_id<< std::endl;
-		for (int i = 0; i < fNch; i++) {
-			// raw adc
-			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][fSigStrips[i]]<<","<<
-					frawADC[1][fSigStrips[i]]<<","<<
-					frawADC[2][fSigStrips[i]]<<")   ADC("<<
-					fADCForm[0][fSigStrips[i]]<<","<<
-					fADCForm[1][fSigStrips[i]]<<","<<
-					fADCForm[2][fSigStrips[i]]<<")"<<
-					fADCcor[fSigStrips[i]]<<
-					std::endl;
-
-		}
-    }
-
+//		if (fNch >= 1) {
+//			std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
+//					<< "  fired strips:" << fNch << " MPD:" << it->mpd_id
+//					<< " ADC" << it->adc_id << std::endl;
+//
+//			for (int i = 0; i < fNch; i++) {
+//			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][i]<<","<<
+//					frawADC[1][i]<<","<<
+//					frawADC[2][i]<<")   ADC("<<
+//					fADCForm[0][i]<<","<<
+//					fADCForm[1][i]<<","<<
+//					fADCForm[2][i]<<")"<<
+//					fADCcor[fSigStrips[i]]<<
+//					std::endl;
+//
+//			}
+//		}
+	}
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
 
-
-	TH1F *rawHisto=new TH1F(Form("%s_raw_histo",fName.Data()),Form("%s_raw_histo",fName.Data()),600,0,600);
-	TH1F *cmSupHisto=new TH1F(Form("Test_commonSup_histo"),Form("Test_commonSup_histo"),600,0,600);
-	TH1F *pedSupHisto=new TH1F(Form("Test_pedSup_histo"),Form("Test_pedSup_histo"),600,0,600);
-	TH1F *zeroSupHisto=new TH1F(Form("Test_zeroSup_histo"),Form("Test_zeroSup_histo"),600,0,600);
-
-
-	for (auto iter=_rawHistoBuf.begin();iter!=_rawHistoBuf.end();iter++){
-		std::cout<<"Pos"<<iter->first<<"  adc:"<<iter->second<<std::endl;
-		rawHisto->Fill(iter->first,iter->second);
-	}
-
-	for (auto iter=_cmSupHistoBuf.begin();iter!=_cmSupHistoBuf.end();iter++){
-		cmSupHisto->Fill(iter->first,iter->second);
-		}
-	for (auto iter=_pedSupHistoBuf.begin();iter!=_pedSupHistoBuf.end();iter++){
-		pedSupHisto->Fill(iter->first,iter->second);
-		}
-	for (auto iter=_zeroSupHistoBuf.begin();iter!=_zeroSupHistoBuf.end();iter++){
-		zeroSupHisto->Fill(iter->first,iter->second);
-		}
-    //
-    c->Divide(1,4);
-    c->cd(1);
-    rawHisto->Draw("histo");
-    c->cd(2);
-    cmSupHisto->Draw("histo");
-    c->cd(3);
-    pedSupHisto->Draw("histo");
-    c->cd(4);
-    zeroSupHisto->Draw("histo");
-    c->Modified();
-    c->Update();
-    c->Draw();
-    getchar();
-
-    rawHisto->Delete();
-    cmSupHisto->Delete();
-    pedSupHisto->Delete();
-    zeroSupHisto->Delete();
 
     return FindGEMHits();
 }
@@ -609,7 +562,6 @@ Int_t MPDGEMPlane::FindGEMHits(){
             EStep step = kFindMax;
             while( step != kDone and it != next ) {
                 Double_t adc = fADCcor[*it];
-
                 switch( step ) {
                     case kFindMax:
                         // Looking for maximum
@@ -664,6 +616,7 @@ Int_t MPDGEMPlane::FindGEMHits(){
         // for fitting the centroid of the peak.
         Double_t xsum = 0.0, adcsum = 0.0;
         for( ; start != next; ++start ) {
+
             Int_t istrip = *start;
             Double_t pos = GetStart() + istrip * GetPitch();
             Double_t adc = fADCcor[istrip];
@@ -760,15 +713,17 @@ MPDStripData_t MPDGEMPlane::ChargeDep( const std::vector<Float_t>& amp ) {
 
     Float_t x = delta_t/Tp;
 
-    Float_t w1 = TMath::Exp(x-1)/x;
-    Float_t w2 = -2*TMath::Exp(-1)/x;
-    Float_t w3 = TMath::Exp(-x-1)/x;
+    Float_t w1 = TMath::Exp(x-1)/x;      //1.21306
+    Float_t w2 = -2*TMath::Exp(-1)/x;    //-1.47
+    Float_t w3 = TMath::Exp(-x-1)/x;     //0.446
 
     // Deconvoluted signal samples, assuming measurements of zero before the
     // leading edge
+
     Float_t sig[3] = { amp[0]*w1,
         amp[1]*w1+amp[0]*w2,
         amp[2]*w1+amp[1]*w2+amp[0]*w3 };
+
 
     Float_t adc    = delta_t*(sig[0]+sig[1]+sig[2]);
     Float_t time   = 0;     // TODO
