@@ -351,7 +351,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			}
 
 			Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
-
 			// Get the raw data
 			Int_t fNchStartOfAPV = fNch; // count the number of fired strips
 
