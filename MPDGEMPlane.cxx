@@ -12,7 +12,7 @@
 #include <TCanvas.h>
 #include <TH1F.h>
 #include <map>
-
+#include <TStyle.h>
 
 #define ALL(c) (c).begin(), (c).end()
 
@@ -314,14 +314,19 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
     //std::cout << "[MPDGEMPlane::Decode " << fName << "]" << std::endl;
 
 	// used for debug perpose
-
-
 	std::map<int,float> _rawHistoBuf;
 	std::map<int,float> _cmSupHistoBuf;
 	std::map<int,float> _pedSupHistoBuf;
 	std::map<int,float> _zeroSupHistoBuf;
 	std::map<int,float> _pedestalHistoBuf;
 	std::map<int,float> _rmsHistoBuf;
+
+
+	//   Time sample   RStrips ADC value
+	std::map<int, std::map<int, float>> _TSrawHistoBuf;
+	std::map<int, std::map<int, float>> _TScmSupHistoBuf;
+	std::map<int, std::map<int, float>> _TSpedSupHistoBuf;
+	std::map<int, std::map<int, float>> _TSzeroSupHistoBuf;
 
 	Bool_t _above_th=kFALSE;
 
@@ -424,17 +429,45 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
 				Bool_t isAboveThreshold = (float)(ADCBuffSum[strip]/((Int_t)fMaxSamp)) > fZeroSuppressRMS * fRMS[RstripPos];
 
+
+				// loop on the time samples
+				for(auto adc_samp=0;adc_samp<fMaxSamp;adc_samp++){
+					_TSrawHistoBuf[adc_samp][RstripPos]=rawADCBuff[adc_samp][strip];
+					_TScmSupHistoBuf[adc_samp][RstripPos]=cmSupADCBuff[adc_samp][strip];
+					_TSpedSupHistoBuf[adc_samp][RstripPos]=ADCBuff[adc_samp][strip];
+					if(adc_samp==0){
+						std::cout << " pedstal sub"<<_TSpedSupHistoBuf[0][RstripPos]<<std::endl;
+					}
+
+					// apply the 5-sigma cut
+					if(isAboveThreshold){
+						_TSzeroSupHistoBuf[adc_samp][RstripPos]=ADCBuff[adc_samp][strip];
+					}
+
+				}
+				std::cout << "Check Above TH:  plane:" << fName.Data()
+										<< " Pos:" << RstripPos << "  ADC raw value:"
+										<< _TSrawHistoBuf[0][RstripPos]<<" commonsub:"
+										<<_TScmSupHistoBuf[0][RstripPos]<<" pedestsup:"
+										<<_TSpedSupHistoBuf[0][RstripPos]<<" pedestal:"
+										<< fPed[RstripPos]
+										<< "  rms: " << fRMS[RstripPos]
+										<< std::endl;
+
+
+
 				_rawHistoBuf[RstripPos]=(rawADCBuff[0][strip]+rawADCBuff[1][strip]+rawADCBuff[2][strip])/3.0;
 				_cmSupHistoBuf[RstripPos]=(cmSupADCBuff[0][strip]+cmSupADCBuff[1][strip]+cmSupADCBuff[2][strip])/3.0;
 				_pedSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
 				_rmsHistoBuf[RstripPos]=fRMS[RstripPos];
 				_pedestalHistoBuf[RstripPos]=fPed[RstripPos];
 
+
 				if(isAboveThreshold){
 					_zeroSupHistoBuf[RstripPos]=(ADCBuff[0][strip]+ADCBuff[1][strip]+ADCBuff[2][strip])/3.0;
 					_above_th=kTRUE;
 				}
-				std::cout<<"\n Check Above TH:  plane:"<< fName.Data()<<" Pos:"<< RstripPos <<"  ADC value:"<<ADCBuff[1][strip]<<"  rms: "<<fRMS[RstripPos]<<std::endl;
+				//std::cout<<"\n Check Above TH:  plane:"<< fName.Data()<<" Pos:"<< RstripPos <<"  ADC value:"<<ADCBuff[1][strip]<<"  rms: "<<fRMS[RstripPos]<<std::endl;
 
 
 				Vflt_t samples;
@@ -474,26 +507,130 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 
         }// End ichan loop: fNchan = total APVs 
 
-//		std::cout << "Debug [" << __FUNCTION__ << "/" << __LINE__ << ":: "
-//				<< "  fired strips:" << fNch<<" MPD:"<<it->mpd_id<<" ADC"<<it->adc_id<< std::endl;
-//		for (int i = 0; i < fNch; i++) {
-//			// raw adc
-//			std::cout <<"	"<<"StripID:"<<fSigStrips[i]<<" raw adc ("<<frawADC[0][fSigStrips[i]]<<","<<
-//					frawADC[1][fSigStrips[i]]<<","<<
-//					frawADC[2][fSigStrips[i]]<<")   ADC("<<
-//					fADCForm[0][fSigStrips[i]]<<","<<
-//					fADCForm[1][fSigStrips[i]]<<","<<
-//					fADCForm[2][fSigStrips[i]]<<")"<<
-//					fADCcor[fSigStrips[i]]<<
-//					std::endl;
-//
-//		}
     }
 
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
 
-    TCanvas *cped=new TCanvas(Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
+
+    // generate the plot and save it into jpg file
+//    if(evdata.GetEvNum()>60)
+	{
+
+		// create the histogram
+		std::map<int,TH1F *> rawHisto;
+		std::map<int,TH1F *> cmSupHisto;
+		std::map<int,TH1F *> pedSupHisto;
+		std::map<int,TH1F *> zeroSupHisto;
+
+		// Initialize all the histograms
+		for (auto adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+			rawHisto[adc_samp] = new TH1F(
+					Form("Raw_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp),
+					Form("Raw_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp), 2000, 0, 2000);
+			rawHisto[adc_samp]->GetYaxis()->SetLabelSize(0.1);
+			rawHisto[adc_samp]->GetXaxis()->SetLabelSize(0.1);
+			rawHisto[adc_samp]->SetTitleSize(2);
+
+			cmSupHisto[adc_samp] = new TH1F(
+					Form("cmSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp),
+					Form("cmSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp), 2000, 0, 2000);
+			cmSupHisto[adc_samp]->GetYaxis()->SetLabelSize(0.1);
+			cmSupHisto[adc_samp]->GetXaxis()->SetLabelSize(0.1);
+
+			pedSupHisto[adc_samp] = new TH1F(
+					Form("pedSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp),
+					Form("pedSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp), 2000, 0, 2000);
+			pedSupHisto[adc_samp]->GetYaxis()->SetLabelSize(0.1);
+			pedSupHisto[adc_samp]->GetXaxis()->SetLabelSize(0.1);
+
+//			pedSupHisto[adc_samp]->GetYaxis()->SetRangeUser(-50,4000);
+			zeroSupHisto[adc_samp] = new TH1F(
+					Form("zeroSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp),
+					Form("zeroSup_histo_evt%d_%s_Tsample%d", evdata.GetEvNum(),
+							fName.Data(), adc_samp), 2000, 0, 2000);
+			zeroSupHisto[adc_samp]->GetYaxis()->SetLabelSize(0.1);
+			zeroSupHisto[adc_samp]->GetXaxis()->SetLabelSize(0.1);
+
+			gStyle->SetTitleFontSize(0.1);
+
+		}
+
+		for(auto adc_samp = 0; adc_samp<fMaxSamp;adc_samp++){
+			rawHisto[adc_samp]->GetXaxis()->SetRangeUser(-10,
+					_TSrawHistoBuf[adc_samp].size());
+			cmSupHisto[adc_samp]->GetXaxis()->SetRangeUser(-10,
+					_TSrawHistoBuf[adc_samp].size());
+			pedSupHisto[adc_samp]->GetXaxis()->SetRangeUser(-10,
+					_TSrawHistoBuf[adc_samp].size());
+			zeroSupHisto[adc_samp]->GetXaxis()->SetRangeUser(-10,
+					_TSrawHistoBuf[adc_samp].size());
+		}
+		// dump data to the histogram
+		for(auto adc_samp = 0; adc_samp<fMaxSamp;adc_samp++){
+			// dump the raw
+			for(auto iter=_TSrawHistoBuf[adc_samp].begin();iter!=_TSrawHistoBuf[adc_samp].end();iter++){
+				rawHisto[adc_samp]->Fill(iter->first,iter->second);
+//				rawHisto[adc_samp]->GetXaxis()->SetRangeUser(-10,_TSrawHistoBuf[adc_samp].size())
+			}
+			// dump the cm
+			for (auto iter = _TScmSupHistoBuf[adc_samp].begin();iter != _TScmSupHistoBuf[adc_samp].end(); iter++) {
+				cmSupHisto[adc_samp]->Fill(iter->first, iter->second);
+			}
+			// dump the ped
+			for (auto iter = _TSpedSupHistoBuf[adc_samp].begin();iter != _TSpedSupHistoBuf[adc_samp].end(); iter++) {
+				pedSupHisto[adc_samp]->Fill(iter->first, iter->second);
+			}
+			// dump the zero
+			for (auto iter = _TSzeroSupHistoBuf[adc_samp].begin();iter != _TSzeroSupHistoBuf[adc_samp].end(); iter++) {
+				zeroSupHisto[adc_samp]->Fill(iter->first, iter->second);
+			}
+		}
+
+		TCanvas *c = new TCanvas(
+						Form("Canvas_event%d_%s", evdata.GetEvNum(), fName.Data()),
+						Form("Canvas_event%d_%s", evdata.GetEvNum(), fName.Data()),
+						500, 400);
+
+		c->Divide(1, 4 );
+		// plot the graph to the canvas
+		for (auto adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+			c->cd(1);
+			rawHisto[adc_samp]->Draw("HISTO");
+			c->cd(2);
+			cmSupHisto[adc_samp]->Draw("HISTO");
+			c->cd(3);
+			pedSupHisto[adc_samp]->Draw("HISTO");
+			c->cd(4);
+			zeroSupHisto[adc_samp]->Draw("HISTO");
+			//c->Draw();
+			c->Update();
+			c->SaveAs(Form("result/Canvas_event%d_TS%d_%s.jpg", evdata.GetEvNum(),adc_samp, fName.Data()));
+		}
+		c->Close();
+		c->Delete();
+
+
+		// release the memory
+		for (auto adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+			rawHisto[adc_samp]->Delete();
+			cmSupHisto[adc_samp]->Delete();
+			pedSupHisto[adc_samp]->Delete();
+			zeroSupHisto[adc_samp]->Delete();
+		}
+
+    }
+if(evdata.GetEvNum()>100) exit(0);
+
+
+/*    TCanvas *cped=new TCanvas(Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_ped%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
     TH1F *pedestalHisto=new TH1F(Form("Test_Pedestal_histo"),Form("Test_Pedestal_histo"),600,0,600);
     TH1F *rmsHisto=new TH1F(Form("Test_Pedestal_rms_histo"),Form("Test_Pedestal_rms_histo"),600,0,600);
 
@@ -511,60 +648,67 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
     rmsHisto->Draw("HISTO");
     cped->Draw();
     cped->Update();
-    getchar();
+    getchar();*/
 
 /*
-if(_above_th){
-	TCanvas *c=new TCanvas(Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),Form("Canvas_event%d_%s",evdata.GetEvNum(),fName.Data()),1000,1000);
+if (_above_th)
+  {
+		TCanvas *c = new TCanvas(
+				Form("Canvas_event%d_%s", evdata.GetEvNum(), fName.Data()),
+				Form("Canvas_event%d_%s", evdata.GetEvNum(), fName.Data()),
+				1000, 1000);
 
-	TH1F *rawHisto=new TH1F(Form("%s_raw_histo",fName.Data()),Form("%s_raw_histo",fName.Data()),600,0,600);
-	TH1F *cmSupHisto=new TH1F(Form("Test_commonSup_histo"),Form("Test_commonSup_histo"),600,0,600);
-	TH1F *pedSupHisto=new TH1F(Form("Test_pedSup_histo"),Form("Test_pedSup_histo"),600,0,600);
-	TH1F *zeroSupHisto=new TH1F(Form("Test_zeroSup_histo"),Form("Test_zeroSup_histo"),600,0,600);
+		TH1F *rawHisto = new TH1F(Form("%s_raw_histo", fName.Data()),
+				Form("%s_raw_histo", fName.Data()), 600, 0, 600);
+		TH1F *cmSupHisto = new TH1F(Form("Test_commonSup_histo"),
+				Form("Test_commonSup_histo"), 600, 0, 600);
+		TH1F *pedSupHisto = new TH1F(Form("Test_pedSup_histo"),
+				Form("Test_pedSup_histo"), 600, 0, 600);
+		TH1F *zeroSupHisto = new TH1F(Form("Test_zeroSup_histo"),
+				Form("Test_zeroSup_histo"), 600, 0, 600);
 
-
-
-
-	for (auto iter=_rawHistoBuf.begin();iter!=_rawHistoBuf.end();iter++){
-		//std::cout<<"Pos"<<iter->first<<"  adc:"<<iter->second<<std::endl;
-		rawHisto->Fill(iter->first,iter->second);
-	}
-
-	for (auto iter=_cmSupHistoBuf.begin();iter!=_cmSupHistoBuf.end();iter++){
-		cmSupHisto->Fill(iter->first,iter->second);
-		}
-	for (auto iter=_pedSupHistoBuf.begin();iter!=_pedSupHistoBuf.end();iter++){
-		pedSupHisto->Fill(iter->first,iter->second);
-		}
-	for (auto iter=_zeroSupHistoBuf.begin();iter!=_zeroSupHistoBuf.end();iter++){
-		zeroSupHisto->Fill(iter->first,iter->second);
+		for (auto iter = _rawHistoBuf.begin(); iter != _rawHistoBuf.end();
+				iter++) {
+			//std::cout<<"Pos"<<iter->first<<"  adc:"<<iter->second<<std::endl;
+			rawHisto->Fill(iter->first, iter->second);
 		}
 
+		for (auto iter = _cmSupHistoBuf.begin(); iter != _cmSupHistoBuf.end();
+				iter++) {
+			cmSupHisto->Fill(iter->first, iter->second);
+		}
+		for (auto iter = _pedSupHistoBuf.begin(); iter != _pedSupHistoBuf.end();
+				iter++) {
+			pedSupHisto->Fill(iter->first, iter->second);
+		}
+		for (auto iter = _zeroSupHistoBuf.begin();
+				iter != _zeroSupHistoBuf.end(); iter++) {
+			zeroSupHisto->Fill(iter->first, iter->second);
+		}
 
+		c->Divide(1, 4);
+		c->cd(1);
+		rawHisto->Draw("histo");
+		c->cd(2);
+		cmSupHisto->Draw("histo");
+		c->cd(3);
+		pedSupHisto->Draw("histo");
+		c->cd(4);
+		zeroSupHisto->Draw("histo");
+		c->SaveAs(Form("result/Canvas_event%d_%s.jpg", evdata.GetEvNum(), fName.Data()));
+		c->Draw();
+		c->Update();
+		c->Modified();
 
+		getchar();
 
-    c->Divide(1,4);
-    c->cd(1);
-    rawHisto->Draw("histo");
-    c->cd(2);
-    cmSupHisto->Draw("histo");
-    c->cd(3);
-    pedSupHisto->Draw("histo");
-    c->cd(4);
-    zeroSupHisto->Draw("histo");
-    c->Draw();
-    c->Update();
-    c->Modified();
-
-    getchar();
-
-    rawHisto->Delete();
-    cmSupHisto->Delete();
-    pedSupHisto->Delete();
-    zeroSupHisto->Delete();
+		rawHisto->Delete();
+		cmSupHisto->Delete();
+		pedSupHisto->Delete();
+		zeroSupHisto->Delete();
 //    c->Delete();
-}
-*/
+	}*/
+
     return FindGEMHits();
 }
 
