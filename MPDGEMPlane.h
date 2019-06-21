@@ -53,7 +53,6 @@ class MPDGEMPlane : public TreeSearch::GEMPlane {
 
         virtual Int_t   Begin( THaRunBase* r=0 );
         virtual Int_t   End( THaRunBase* r=0 );
-
     protected:
         std::vector<mpdmap_t>    fMPDmap;
         std::vector<Int_t>       fChanMapData;
