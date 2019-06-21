@@ -4,12 +4,12 @@
 #include <TTree.h>
 #include <TMatrix.h>
 #include <vector>
-
+#include <string>
 #pragma cling load("libTreeSearch-GEM.so");
 #pragma cling load("../libprexCounting.so");
 
 #define _ROOTREADER_MAX_GEM_CHAMBER 7
-
+#define _ROOTREADER_MAX_TSAMPLE 7;
 struct position3d{
 	double_t x;
 	double_t y;
@@ -18,6 +18,13 @@ public:
 	position3d(double_t _x,double_t _y,double_t _z):
 		x(_x), y(_y),z(_z){};
 };
+
+enum dimension{
+	X,
+	Y,
+	X
+};
+
 //
 //struct prex_gem_infor{
 //public:
@@ -68,8 +75,26 @@ void rootReader(TString fname="test_20532.root"){
 		}
 	}
 
+
+	double_t  *fadc;   // 3 adcs. strips
+	double_t *fstrips;
+
+	// GEM detectors / dimensions / tsamples / rspos / adc
+	std::map<int16_t, std::map<dimension,std::map<int16_t,std::map<Int_t,double_t>>>> event;
+
+	Int_t Ndata;
 	// initialize the buffers
 	for (auto chamberID : chamberList){
+		// check the X-dimension and Y-dimension size, no result, skip it
+		for (auto adc_sample =0; adc_sample <=_ROOTREADER_MAX_TSAMPLE; adc_sample){
+
+			// check the x-dimension
+//			std::string branchname(Form("prex.gems."));
+
+			// check the y-dimension
+
+		}
+		//PRex_GEM_tree->SetBranchAddress(Form("Ndata.prex.gems.x%d"))
 
 
 	}
