@@ -34,3 +34,7 @@ This issues is caused by the Analyzer. The Max Chan and the DATA is not large en
     const UShort_t THaCrateMap::MAXCHAN =4096 * 2;   
     const UShort_t THaCrateMap::MAXDATA = 32768 * 2;
 
+
+## some other issues
+
+### 1. in the mapping the gem_id in the mapping does not match the configuration
