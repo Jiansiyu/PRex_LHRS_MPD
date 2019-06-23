@@ -143,9 +143,7 @@ void rootReader(TString fname="test_20532.root"){
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fadcformat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fadcformat.c_str(),fadc[chamberID][adc_sample]);
 			}
-
 		}
-
 	}
 
 	// read the vdc values
