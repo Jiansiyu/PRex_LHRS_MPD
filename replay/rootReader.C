@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 #include <TCanvas.h>
-
+#include <TLine.h>
 #pragma cling load("libTreeSearch-GEM.so");
 #pragma cling load("../libprexCounting.so");
 
@@ -78,7 +78,7 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Error]: can not find tree in the file !!!"<<std::endl;
 	}
 
-	TCanvas *eventCanvas=new TCanvas("CanvasDisplay","CanvasDisplay",600,600);
+	TCanvas *eventCanvas=new TCanvas("CanvasDisplay","CanvasDisplay",1000,1000);
 
 	// check the detector are listed in the tree
 	std::vector<int16_t> chamberList;
@@ -148,9 +148,11 @@ void rootReader(TString fname="test_20532.root"){
 
 	}
 
+	// read the vdc values
+
 	for(auto entry=0;entry<PRex_GEM_tree->GetEntries();entry++){
 	// load the data to the buff
-	PRex_GEM_tree->GetEntry(entry);
+	PRex_GEM_tree->GetEntry(25);
 	for(auto chamberID:chamberList){
 		std::cout<<"Chamber: "<<chamberID<<std::endl;
 
@@ -185,16 +187,15 @@ void rootReader(TString fname="test_20532.root"){
 	// load the data to plot
 
 	const double_t positionshift[]={0,256.0,256.0,256.0,768.0,768.0,768.0};
-	double_t positionZpos[]={0.0,0.1,0.6858+0.1,0.889+0.6858+0.1,1.104+0.889+0.6858+0.1,1.180+1.104+0.889+0.6858+0.1,1.256+1.180+1.104+0.889+0.6858+0.1};
+	double_t positionZpos[]={0.0,  0.9, 1.5858, 1.789, 2.34135, 2.44305, 2.54};   // updated version of the z-position. take the vdc to be 0,
 
-	// write the result to histo
 	// chamber / hit histo
 	std::map<int16_t,TH1F *> hitHisto;
 	for(auto chamberID : chamberList){
 		if(fstripNum[chamberID]!=0){
 			if(!(hitHisto.find(chamberID)!=hitHisto.end())){
-				hitHisto[chamberID]= new TH1F(Form("chamber%d",chamberID),Form("chamber%d",chamberID),0.6/0.0004,-0.3,0.3);
-				hitHisto[chamberID]->GetYaxis()->SetRangeUser(-0.1,6);
+				hitHisto[chamberID]= new TH1F(Form("chamber%d",chamberID),Form("chamber%d",chamberID),0.6/0.00004,-2.1,0);
+				hitHisto[chamberID]->GetYaxis()->SetRangeUser(0,2.1);
 				hitHisto[chamberID]->SetMarkerStyle(20);
 				hitHisto[chamberID]->SetMarkerSize(1);
 			}
@@ -204,12 +205,25 @@ void rootReader(TString fname="test_20532.root"){
 				double_t x=(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
 				double_t y=positionZpos[chamberID];
 				std::cout<<"chamber:"<<chamberID<<"  ("<<x<<", "<<y<<")"<<std::endl;
+
+				// apply the rotation for the GEM detectors
+				x=0.7071*(x-y);
+				y=0.7071*(x+y);
+				std::cout<<"chamber:"<<chamberID<<"rotation:  ("<<x<<", "<<y<<")"<<std::endl;
 				hitHisto[chamberID]->Fill(x,y);
 			}
 		}
 	}
 	eventCanvas->cd();
 	Bool_t flag=kFALSE;
+
+	// draw the detector positions
+	// SBU gem detectors
+
+	std::map<int16_t,TLine *> detectorline;
+
+
+
 
 	for(auto histo=hitHisto.begin();histo!=hitHisto.end();histo++){
 		if(!flag){
@@ -218,6 +232,26 @@ void rootReader(TString fname="test_20532.root"){
 		}else{
 			(histo->second)->Draw("HISTPsame");
 		}
+	}
+
+	double_t detector_start_pos[]={0,-256*0.0004,-256*0.0004,-256*0.0004,-128*6*0.0004,-128*6*0.0004,-128*6*0.0004};
+	for (int i =1; i <=6;i++){
+//			TLine *line = new TLine(0,10,300,900);
+
+		double_t start_x=detector_start_pos[i];
+		double_t start_y=positionZpos[i];
+		double_t end_x=-detector_start_pos[i];
+		double_t end_y=positionZpos[i];
+
+		// apply the rotation matrix
+		start_x=0.7071*(start_x-start_y);
+		start_y=0.7071*(start_x+start_y);
+		end_x=0.7071*(end_x-end_y);
+		end_y=0.7071*(end_x+end_y);
+		std::cout<<"start point:("<<start_x<<", "<<start_y<<") end point:("<<end_x<<",  "<<end_y<<")"<<std::endl;
+		detectorline[i]=new TLine(start_x,start_y,end_x,end_y);
+		detectorline[i]->SetLineWidth(2);
+		detectorline[i]->Draw("same");
 	}
 	eventCanvas->Draw();
 	eventCanvas->Update();
