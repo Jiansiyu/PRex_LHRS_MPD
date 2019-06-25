@@ -8,62 +8,14 @@
 #include <string>
 #include <TCanvas.h>
 #include <TLine.h>
+#include <string>
+#include <stdlib.h>
+#include <cctype>
 #pragma cling load("libTreeSearch-GEM.so");
 #pragma cling load("../libprexCounting.so");
 
 #define _ROOTREADER_MAX_GEM_CHAMBER 7
 #define _ROOTREADER_MAX_TSAMPLE 3
-struct position3d{
-	double_t x;
-	double_t y;
-	double_t z;
-public:
-	position3d(double_t _x,double_t _y,double_t _z):
-		x(_x), y(_y),z(_z){};
-};
-
-enum dimension{
-	X,
-	Y,
-	Z
-};
-
-struct prex_tracking_event{
-public:
-	prex_tracking_event(){};
-	~prex_tracking_event(){};
-
-	// load the the data
-	void addGEMHit(){};
-
-	double_t GetZpos(Int_t chamberID){
-		switch(chamberID){
-		case 1:
-			return 0.0;
-		case 2:
-			return 0.6858;
-		case 3:
-			return 0.889;
-		case 4:
-			return 1.104;
-
-		case 5:
-			return 1.180;
-
-		case 6:
-			return 1.256;
-		}
-		return 0;
-	}
-};
-
-
-struct gemHit{
-
-	gemHit();
-public:
-	void addHit(int detID,double_t *fadc,double_t *rstrips){};
-};
 
 void rootReader(TString fname="test_20532.root"){
 	if(fname.IsNull()){
@@ -86,7 +38,7 @@ void rootReader(TString fname="test_20532.root"){
 
 	std::cout<<"List of Chambers:"<<std::endl;
 	for(int16_t chambercount=0; chambercount<=_ROOTREADER_MAX_GEM_CHAMBER;chambercount++){
-		if(PRex_GEM_tree->GetListOfBranches()->Contains(Form("prex.gems.x%d.adc1",chambercount))){
+		if(PRex_GEM_tree->GetListOfBranches()->Contains(Form("RGEM.rgems.x%d.adc1",chambercount))){
 			std::cout<<"	->"<< chambercount<<std::endl;
 			chamberList.push_back(chambercount);
 		}
@@ -101,7 +53,7 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"Reading chamber :"<<chamberID<<"\n	sample:";
 		//std::vector<int16_t> TsampleLit;
 		for (int adc_sample =0; adc_sample <_ROOTREADER_MAX_TSAMPLE; adc_sample++){
-			if(PRex_GEM_tree->GetListOfBranches()->Contains(Form("prex.gems.x%d.adc%d",chamberID,adc_sample))){
+			if(PRex_GEM_tree->GetListOfBranches()->Contains(Form("RGEM.rgems.x%d.adc%d",chamberID,adc_sample))){
 				std::cout<<adc_sample<<"  ";
 				//TsampleLit.push_back(adc_sample);
 				TsampleLit[chamberID].push_back(adc_sample);
@@ -119,7 +71,8 @@ void rootReader(TString fname="test_20532.root"){
 	double_t fvdcX[100];
 	Int_t fvdcYNum=0;
 	double_t fvdcY[100];
-
+	double_t fvdc_th[10];
+	double_t fvdc_ph[10];
 	std::string fvdcXNumForm(Form("Ndata.R.tr.x"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcXNumForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdcXNumForm.c_str(),&fvdcXNum);
@@ -133,7 +86,19 @@ void rootReader(TString fname="test_20532.root"){
 	}else{
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
+	std::string fvdc_th_Form(Form("R.tr.th"));
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdc_th_Form.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fvdc_th_Form.c_str(),fvdc_th);
+	}else{
+		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
+	}
 
+	std::string fvdc_ph_Form(Form("R.tr.ph"));
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdc_ph_Form.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fvdc_ph_Form.c_str(),fvdc_ph);
+	}else{
+		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
+	}
 
     //  chamber / value
 	std::map<int16_t,double_t *>fstrip;
@@ -141,27 +106,28 @@ void rootReader(TString fname="test_20532.root"){
 	// chamber / adcID / value
 	std::map<Int_t,std::map<Int_t,Int_t>> fadcNum;
 	std::map<Int_t,std::map<Int_t,double_t *>> fadc;
+	std::string gem_root_header("RGEM.rgems");
 	for (auto chamberID : chamberList){
 		for(auto adc_sample : TsampleLit[chamberID]){
 
-			std::string fstripNumFormat(Form("Ndata.prex.gems.x%d.strip.number",chamberID));
+			std::string fstripNumFormat(Form("Ndata.%s.x%d.strip.number",gem_root_header.c_str(),chamberID));
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fstripNumFormat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fstripNumFormat.c_str(),&fstripNum[chamberID]);
 			}
 			// load the strip number informations
 			fstrip[chamberID]=new double_t [100];//[(fstripNum[chamberID])];
-			std::string fstripFormat(Form("prex.gems.x%d.strip.number",chamberID));
+			std::string fstripFormat(Form("%s.x%d.strip.number",gem_root_header.c_str(),chamberID));
 			if (PRex_GEM_tree->GetListOfBranches()->Contains(fstripFormat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fstripFormat.c_str(),fstrip[chamberID]);
 			}
 
-			std::string fadcNumformat(Form("Ndata.prex.gems.x%d.adc%d",chamberID,adc_sample));
+			std::string fadcNumformat(Form("Ndata.%s.x%d.adc%d",gem_root_header.c_str(),chamberID,adc_sample));
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fadcNumformat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fadcNumformat.c_str(),&fadcNum[chamberID][adc_sample]);
 			}
 
 			fadc[chamberID][adc_sample]=new double_t [100];//[(fadcNum[chamberID][adc_sample])];
-			std::string fadcformat(Form("prex.gems.x%d.adc%d",chamberID,adc_sample));
+			std::string fadcformat(Form("%s.x%d.adc%d",gem_root_header.c_str(),chamberID,adc_sample));
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fadcformat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fadcformat.c_str(),fadc[chamberID][adc_sample]);
 			}
@@ -234,14 +200,8 @@ void rootReader(TString fname="test_20532.root"){
 				std::cout<<"chamber:"<<chamberID<<"  ("<<x<<", "<<y<<")"<<std::endl;
 
 				// apply the rotation for the GEM detectors
-//				x=0.7071*(x-y);
-//				y=0.7071*(x+y);
-
 				double_t rotation_x=0.7071*(x-y);
 				double_t rotation_y=0.7071*(x+y);
-
-//				double_t rotation_x=x;
-//				double_t rotation_y=y;
 
 				std::cout<<"chamber:"<<chamberID<<"rotation:  ("<<rotation_x<<", "<<rotation_y<<")"<<std::endl;
 				hitHisto[chamberID]->Fill(rotation_x,rotation_y);
@@ -309,17 +269,22 @@ void rootReader(TString fname="test_20532.root"){
 	// plot the result from VDC if there is any
 	// check the size of the x-dimension
 	if(fvdcXNum>0){
-		TH1F *vdchisto=new TH1F("vdc","vdc",0.6/0.00004,-2.1,0);
+		TH1F *vdchisto=new TH1F("vdc","vdc",3.8/0.00004,-2.5,1.3);
 		for(auto i =0; i<fvdcXNum;i++){
-			vdchisto->Fill(fvdcX[i],positionZpos[0]);
+			vdchisto->Fill(-fvdcX[i],0.001);
+			std::cout<<"VDC plane:("<<-fvdcX[i]<<", "<< positionZpos[0]<<std::endl;
 		}
 		vdchisto->SetMarkerStyle(20);
+		vdchisto->SetMarkerColor(2);
 		vdchisto->SetMarkerSize(1);
-		vdchisto->Draw("HISTPsame");
+		vdchisto->Draw("Psame");
+
 	}
 
 //	eventCanvas->Draw();
 	eventCanvas->Update();
+	if(fvdcXNum>0)
 	getchar();
+
 	}
 }
