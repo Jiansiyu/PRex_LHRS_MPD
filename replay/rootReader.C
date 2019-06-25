@@ -100,6 +100,20 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
 
+	std::string fvdcYNumForm(Form("Ndata.R.tr.y"));
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcYNumForm.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fvdcYNumForm.c_str(),&fvdcYNum);
+	}else{
+		std::cout<<"[Warning]:: VDC data did not find in the replay resuly"<<std::endl;
+	}
+	std::string fvdcYForm(Form("R.tr.y"));
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcYForm.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fvdcYForm.c_str(),fvdcY);
+	}else{
+		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
+	}
+
+
     //  chamber / value
 	std::map<int16_t,double_t *>fstrip;
 	std::map<int16_t,Int_t> fstripNum;
@@ -181,30 +195,23 @@ void rootReader(TString fname="test_20532.root"){
 		if(fstripNum[chamberID]>0){
 			if(!(hitHisto.find(chamberID)!=hitHisto.end())){
 				hitHisto[chamberID]= new TH1F(Form("chamber%d",chamberID),Form("chamber%d",chamberID),6/0.00004,-3,3);
-//				hitHisto[chamberID]->GetYaxis()->SetRangeUser(0,2.1);
 				hitHisto[chamberID]->SetMarkerStyle(20);
 				hitHisto[chamberID]->SetMarkerSize(1);
 			}
-
 			// loop on strips
 			for(auto strips_iter=0;strips_iter<fstripNum[chamberID];strips_iter++){
 				double_t x=(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
 				double_t y=positionZpos[chamberID];
-
 				// caution UVa GEM need to match the VDC coordination
 				if(chamberID>=4){
 					x=-(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
 					y=positionZpos[chamberID];
 				}
-
-				std::cout<<"chamber:"<<chamberID<<"  ("<<x<<", "<<y<<")"<<std::endl;
-
+				//std::cout<<"chamber:"<<chamberID<<"  ("<<x<<", "<<y<<")"<<std::endl;
 				// apply the rotation for the GEM detectors
-				double_t rotation_x=0.7071*(x-y);
-				double_t rotation_y=0.7071*(x+y);
-
-				std::cout<<"chamber:"<<chamberID<<"rotation:  ("<<rotation_x<<", "<<rotation_y<<")"<<std::endl;
-				hitHisto[chamberID]->Fill(rotation_x,rotation_y);
+//				double_t rotation_x=0.7071*(x-y);
+//				double_t rotation_y=0.7071*(x+y);
+				hitHisto[chamberID]->Fill(x,y);
 			}
 		}
 	}
@@ -212,9 +219,9 @@ void rootReader(TString fname="test_20532.root"){
 	Bool_t flag=kFALSE;
 
 
-	TH1F *trackingHut=new TH1F("Tracking detectors","Tracking detectors",3.8/0.00004,-2.5,1.3);
-	trackingHut->GetYaxis()->SetRangeUser(-1,2.8);
-	trackingHut->Draw();
+	TH1F *trackingHut=new TH1F("Tracking detectors","Tracking detectors",3.8/0.00004,-2.5,2.5);
+	trackingHut->GetYaxis()->SetRangeUser(0,2.8);
+	trackingHut->Draw("histp");
 	flag=kTRUE;
 	// draw the detector positions
 	// SBU gem detectors
@@ -223,68 +230,72 @@ void rootReader(TString fname="test_20532.root"){
 
 	for(auto histo=hitHisto.begin();histo!=hitHisto.end();histo++){
 		if(!flag){
-			(histo->second)->Draw("P");
+			(histo->second)->Draw("HISTP");
 			flag=kTRUE;
 		}else{
-			(histo->second)->Draw("Psame");
+			(histo->second)->Draw("HISTPsame");
 		}
 	}
 
 	// draw the detector planes
 	// beam center reference line
 
-
-	TLine *beamcenter=new TLine(-2,2,0,0);
+	TLine *beamcenter=new TLine(0,0,0,2.5);
 	beamcenter->SetLineWidth(1);
 	beamcenter->SetLineColor(45);
-	beamcenter->Draw("same");
+	beamcenter->Draw("Psame");
 
 
 	TLine *vdcplane=new TLine(-1.059,0,1.059,0);
 	vdcplane->SetLineWidth(2);
-	vdcplane->Draw("same");
+	vdcplane->Draw("Psame");
 	double_t detector_start_pos[]={0,-256*0.0004,-256*0.0004,-256*0.0004,-128*6*0.0004,-128*6*0.0004,-128*6*0.0004};
 	for (int i =1; i <=6;i++){
-//			TLine *line = new TLine(0,10,300,900);
 
 		double_t start_x=detector_start_pos[i];
 		double_t start_y=positionZpos[i];
 		double_t end_x=-detector_start_pos[i];
 		double_t end_y=positionZpos[i];
-		//std::cout<<"before rotation start point:("<<start_x<<", "<<start_y<<")"<<"sum:"<<start_x+start_y<<" end point:("<<end_x<<",  "<<end_y<<")"<<std::endl;
-		// apply the rotation matrix
 
+		// apply the rotation matrix
 		double_t rotation_start_x=(start_x-start_y)*0.7071;
 		double_t rotation_start_y=(start_x+start_y)*0.7071;
 
 		double_t rotation_end_x=(end_x-end_y)*0.7071;
 		double_t rotation_end_y=(end_x+end_y)*0.7071;
-		//std::cout<<"start point:("<<start_x<<", "<<start_y<<") end point:("<<end_x<<",  "<<end_y<<")"<<std::endl;
-		//std::cout<<"start point:("<<rotation_start_x<<", "<<rotation_start_y<<") end point:("<<rotation_end_x<<",  "<<rotation_end_y<<")"<<std::endl;
-		detectorline[i]=new TLine(rotation_start_x,rotation_start_y,rotation_end_x,rotation_end_y);
+
+		detectorline[i]=new TLine(start_x,start_y,end_x,end_y);
 		detectorline[i]->SetLineWidth(2);
-		detectorline[i]->Draw("same");
+		detectorline[i]->Draw("HISTPsame");
 	}
 
 	// plot the result from VDC if there is any
 	// check the size of the x-dimension
 	if(fvdcXNum>0){
 		TH1F *vdchisto=new TH1F("vdc","vdc",3.8/0.00004,-2.5,1.3);
-		for(auto i =0; i<fvdcXNum;i++){
-			vdchisto->Fill(-fvdcX[i],0.001);
-			std::cout<<"VDC plane:("<<-fvdcX[i]<<", "<< positionZpos[0]<<std::endl;
-		}
+		vdchisto->Fill(fvdcX[0],0.00001);     // change to the first track
+
 		vdchisto->SetMarkerStyle(20);
 		vdchisto->SetMarkerColor(2);
 		vdchisto->SetMarkerSize(1);
-		vdchisto->Draw("Psame");
+		vdchisto->Draw("HISTPsame");
 
+		// plot the tracks
+		// convert the tr to detect
+		double_t detect_th=(fvdc_th[0]+1.0)/(1.0-fvdc_th[0]);
+		double_t detect_x=(0.7071*fvdcX[0])/(1.0-fvdc_th[0]);
+
+		TLine *vdcTrack=new TLine(fvdcX[0],0.001,fvdcX[0]+positionZpos[6]*fvdc_th[0],positionZpos[6]);
+		vdcTrack->SetLineWidth(1);
+		vdcTrack->SetLineColor(6);
+		vdcTrack->Draw("HISTPsame");
 	}
 
-//	eventCanvas->Draw();
 	eventCanvas->Update();
-	if(fvdcXNum>0)
-	getchar();
+	if(fvdcXNum>0){
+		getchar();
+		eventCanvas->SaveAs();
+	}
 
 	}
 }
