@@ -18,6 +18,9 @@
 #define _ROOTREADER_MAX_TSAMPLE 3
 
 void rootReader(TString fname="test_20532.root"){
+	TCanvas *eventCanvas=new TCanvas("CanvasDisplay","CanvasDisplay",1000,1000);
+	eventCanvas->Divide(1,2);
+
 	if(fname.IsNull()){
 		std::cout<<"Please input the file name"<<std::endl;
 	}
@@ -30,7 +33,6 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Error]: can not find tree in the file !!!"<<std::endl;
 	}
 
-	TCanvas *eventCanvas=new TCanvas("CanvasDisplay","CanvasDisplay",1000,1000);
 
 	// check the detector are listed in the tree
 	std::vector<int16_t> chamberList;
@@ -66,13 +68,28 @@ void rootReader(TString fname="test_20532.root"){
 	// allocate the memory to the tree
 
 	// search for the vdcs
-
+	Int_t fEvtNum=0;
+	Int_t fRun=0;
 	Int_t fvdcXNum=0;
 	double_t fvdcX[100];
 	Int_t fvdcYNum=0;
 	double_t fvdcY[100];
 	double_t fvdc_th[10];
 	double_t fvdc_ph[10];
+
+	std::string fEvtNumForm("fEvtHdr.fEvtNum");
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fEvtNumForm.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fEvtNumForm.c_str(),&fEvtNum);
+	}else{
+		std::cout<<"[Warning]:: fEvtNum data did not find in the replay resuly"<<std::endl;
+	}
+	std::string fRunForm("Event_Branch/fEvtHdr/fEvtHdr.fRun");
+	if(PRex_GEM_tree->GetListOfBranches()->Contains(fRunForm.c_str())){
+		PRex_GEM_tree->SetBranchAddress(fRunForm.c_str(),&fRun);
+	}else{
+		std::cout<<"[Warning]:: fRun data did not find in the replay resuly"<<std::endl;
+	}
+
 	std::string fvdcXNumForm(Form("Ndata.R.tr.x"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcXNumForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdcXNumForm.c_str(),&fvdcXNum);
@@ -148,14 +165,34 @@ void rootReader(TString fname="test_20532.root"){
 		}
 	}
 
-	// read the vdc values
+	// read the data for Y dimension
+    //  chamber / value
+	std::map<int16_t,double_t *>fstrip_y;
+	std::map<int16_t,Int_t> fstripNum_y;
+	// chamber / adcID / value
+	std::map<Int_t,std::map<Int_t,Int_t>> fadcNum_y;
+	std::map<Int_t,std::map<Int_t,double_t *>> fadc_y;
+	for (auto chamberID : chamberList){
+		for(auto adc_sample : TsampleLit[chamberID]){
+			std::string fstripNumFormat(Form("Ndata.%s.y%d.strip.number",gem_root_header.c_str(),chamberID));
+			if(PRex_GEM_tree->GetListOfBranches()->Contains(fstripNumFormat.c_str())){
+				PRex_GEM_tree->SetBranchAddress(fstripNumFormat.c_str(),&fstripNum_y[chamberID]);
+			}
 
-	for(auto entry=0;entry<PRex_GEM_tree->GetEntries();entry++){
+			fstrip_y[chamberID]=new double_t [100];//[(fstripNum[chamberID])];
+			std::string fstripFormat(Form("%s.y%d.strip.number",gem_root_header.c_str(),chamberID));
+			if (PRex_GEM_tree->GetListOfBranches()->Contains(fstripFormat.c_str())){
+				PRex_GEM_tree->SetBranchAddress(fstripFormat.c_str(),fstrip_y[chamberID]);
+			}
+		}
+	}
+
+	// read the vdc values
+	for(auto entry=0;entry<PRex_GEM_tree->GetEntries() && entry<2000;entry++){
 	// load the data to the buff
 	PRex_GEM_tree->GetEntry(entry);
 	for(auto chamberID:chamberList){
 		std::cout<<"Chamber: "<<chamberID<<std::endl;
-
 		// print out the fired strips
 		std::cout<<"	fired strips("<<fstripNum[chamberID]<<") :: ";
 		for(int i =0 ; i < fstripNum[chamberID];i++){
@@ -182,108 +219,92 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<std::endl;
 	}
 
-	// data verification
-
 	// load the data to plot
-
-	const double_t positionshift[]={0,256.0,256.0,256.0,768.0,768.0,768.0};
+	const double_t positionshift[]={0,256.0,256.0,256.0,768.0,768.0,768.0};   //  the center of the detector
 	double_t positionZpos[]={0.0,  0.9, 1.5858, 1.789, 2.34135, 2.44305, 2.54};   // updated version of the z-position. take the vdc to be 0,
 
-	// chamber / hit histo
-	std::map<int16_t,TH1F *> hitHisto;
+	const double_t positionshift_x[]={0,256.0,256.0,256.0,768.0,768.0,768.0};   //  the center of the detector
+	const double_t positionshift_y[]={0,128.0,128.0,128.0,640.0,640.0,640.0};
+
+	// write the data for x-z dimension
+	// write the data for y-z dimension
+	std::map<int16_t,TH1F *> GEMHisto_xz;
+	std::map<int16_t,TH1F *> GEMHisto_yz;
 	for(auto chamberID : chamberList){
-		if(fstripNum[chamberID]>0){
-			if(!(hitHisto.find(chamberID)!=hitHisto.end())){
-				hitHisto[chamberID]= new TH1F(Form("chamber%d",chamberID),Form("chamber%d",chamberID),6/0.00004,-3,3);
-				hitHisto[chamberID]->SetMarkerStyle(20);
-				hitHisto[chamberID]->SetMarkerSize(1);
+
+		if(fstripNum[chamberID]>0){ // if there is hit on this dimension
+			if(!(GEMHisto_xz.find(chamberID)!=GEMHisto_xz.end())){
+			GEMHisto_xz[chamberID]=new TH1F(Form("chamber%d_xz",chamberID),Form("chamber%d_xz",chamberID),6/0.00004,-3,3);
+			GEMHisto_xz[chamberID]->SetMarkerStyle(20);
+			GEMHisto_xz[chamberID]->SetMarkerSize(1);
 			}
-			// loop on strips
 			for(auto strips_iter=0;strips_iter<fstripNum[chamberID];strips_iter++){
 				double_t x=(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
-				double_t y=positionZpos[chamberID];
-				// caution UVa GEM need to match the VDC coordination
-				if(chamberID>=4){
-					x=-(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
-					y=positionZpos[chamberID];
+				double_t z=positionZpos[chamberID];
+				if(chamberID>=4){   // for UVa GEM
+					x=-((double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004);
+					z=positionZpos[chamberID];
 				}
-				//std::cout<<"chamber:"<<chamberID<<"  ("<<x<<", "<<y<<")"<<std::endl;
-				// apply the rotation for the GEM detectors
-//				double_t rotation_x=0.7071*(x-y);
-//				double_t rotation_y=0.7071*(x+y);
-				hitHisto[chamberID]->Fill(x,y);
+				GEMHisto_xz[chamberID]->Fill(x,z);
+			}
+		}
+
+		// Y-Z plane
+		if(fstripNum_y[chamberID]>0){
+			if(!(GEMHisto_yz.find(chamberID)!=GEMHisto_yz.end())){
+				GEMHisto_yz[chamberID]=new TH1F(Form("chamber%d_yz",chamberID),Form("chamber%d_yz",chamberID),6/0.00004,-3,3);
+				GEMHisto_yz[chamberID]->SetMarkerStyle(20);
+				GEMHisto_yz[chamberID]->SetMarkerSize(1);
+			}
+			for(auto strips_iter=0;strips_iter<fstripNum_y[chamberID];strips_iter++){
+				double_t y=(double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004;
+				double_t z=positionZpos[chamberID];
+				if(chamberID>=4){   // for UVa GEM
+					y=-((double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004);
+					z=positionZpos[chamberID];
+				}
+				GEMHisto_yz[chamberID]->Fill(y,z);
 			}
 		}
 	}
-	eventCanvas->cd();
-	Bool_t flag=kFALSE;
 
 
-	TH1F *trackingHut=new TH1F("Tracking detectors","Tracking detectors",3.8/0.00004,-2.5,2.5);
-	trackingHut->GetYaxis()->SetRangeUser(0,2.8);
-	trackingHut->Draw("histp");
-	flag=kTRUE;
-	// draw the detector positions
-	// SBU gem detectors
-
-	std::map<int16_t,TLine *> detectorline;
-
-	for(auto histo=hitHisto.begin();histo!=hitHisto.end();histo++){
-		if(!flag){
-			(histo->second)->Draw("HISTP");
-			flag=kTRUE;
-		}else{
-			(histo->second)->Draw("HISTPsame");
-		}
-	}
-
-	// draw the detector planes
-	// beam center reference line
-
-	TLine *beamcenter=new TLine(0,0,0,2.5);
+	TLine *beamcenter=new TLine(0,positionZpos[6],0,0);
 	beamcenter->SetLineWidth(1);
 	beamcenter->SetLineColor(45);
-	beamcenter->Draw("Psame");
+	eventCanvas->SetTitle(Form("Tracking_Detector_Run%d_Evt%d",fEvtNum,fRun));
+	eventCanvas->cd(1);
+	TH1F *trackingHut_xz=new TH1F("Tracking X-Z ","Tracking X-Z",2/0.00004,-1.1,1.1);
+	trackingHut_xz->GetYaxis()->SetRangeUser(0,2.8);
+	trackingHut_xz->Draw("histp");
 
+	// draw beam center
+	beamcenter->Draw("same");
+	// draw VDC
+	TLine *vdcplane_xz=new TLine(-1.059,0,1.059,0);
+	vdcplane_xz->SetLineWidth(2);
+	vdcplane_xz->Draw("same");
 
-	TLine *vdcplane=new TLine(-1.059,0,1.059,0);
-	vdcplane->SetLineWidth(2);
-	vdcplane->Draw("Psame");
-	double_t detector_start_pos[]={0,-256*0.0004,-256*0.0004,-256*0.0004,-128*6*0.0004,-128*6*0.0004,-128*6*0.0004};
+	// draw GEM planestd::map<int16_t,TLine *>
+	std::map<int16_t,TLine *>GEMPlane_xz;
 	for (int i =1; i <=6;i++){
-
-		double_t start_x=detector_start_pos[i];
-		double_t start_y=positionZpos[i];
-		double_t end_x=-detector_start_pos[i];
-		double_t end_y=positionZpos[i];
-
-		// apply the rotation matrix
-		double_t rotation_start_x=(start_x-start_y)*0.7071;
-		double_t rotation_start_y=(start_x+start_y)*0.7071;
-
-		double_t rotation_end_x=(end_x-end_y)*0.7071;
-		double_t rotation_end_y=(end_x+end_y)*0.7071;
-
-		detectorline[i]=new TLine(start_x,start_y,end_x,end_y);
-		detectorline[i]->SetLineWidth(2);
-		detectorline[i]->Draw("HISTPsame");
+		GEMPlane_xz[i]=new TLine(-positionshift_x[i]*0.0004,positionZpos[i],positionshift_x[i]*0.0004,positionZpos[i]);
+		GEMPlane_xz[i]->SetLineWidth(2);
+		GEMPlane_xz[i]->Draw("same");
 	}
 
-	// plot the result from VDC if there is any
-	// check the size of the x-dimension
-	if(fvdcXNum>0){
-		TH1F *vdchisto=new TH1F("vdc","vdc",3.8/0.00004,-2.5,1.3);
-		vdchisto->Fill(fvdcX[0],0.00001);     // change to the first track
+	for(auto histo=GEMHisto_xz.begin();histo!=GEMHisto_xz.end();histo++){
+		histo->second->Draw("HISTPsame");
+	}
 
+	// draw VDC
+	if(fvdcXNum>0){
+		TH1F *vdchisto=new TH1F("vdc_xz","vdc_xz",3.8/0.00004,-2.5,1.3);
+		vdchisto->Fill(fvdcX[0],0.00001);     // change to the first track
 		vdchisto->SetMarkerStyle(20);
 		vdchisto->SetMarkerColor(2);
 		vdchisto->SetMarkerSize(1);
 		vdchisto->Draw("HISTPsame");
-
-		// plot the tracks
-		// convert the tr to detect
-		double_t detect_th=(fvdc_th[0]+1.0)/(1.0-fvdc_th[0]);
-		double_t detect_x=(0.7071*fvdcX[0])/(1.0-fvdc_th[0]);
 
 		TLine *vdcTrack=new TLine(fvdcX[0],0.001,fvdcX[0]+positionZpos[6]*fvdc_th[0],positionZpos[6]);
 		vdcTrack->SetLineWidth(1);
@@ -291,10 +312,54 @@ void rootReader(TString fname="test_20532.root"){
 		vdcTrack->Draw("HISTPsame");
 	}
 
+
+	// draw the y-z plane
+	eventCanvas->cd(2);
+	TH1F *trackingHut_yz=new TH1F("Tracking Y-Z ","Tracking Y-Z",2/0.00004,-1.0,1.0);
+	trackingHut_yz->GetYaxis()->SetRangeUser(0,2.8);
+	trackingHut_yz->Draw("histp");
+
+	// draw beam center
+	beamcenter->Draw("same");
+
+	// draw VDC
+	TLine *vdcplane_yz=new TLine(-0.2,0,0.2,0);
+	vdcplane_yz->SetLineWidth(2);
+	vdcplane_yz->Draw("same");
+
+	// draw GEM planestd::map<int16_t,TLine *>
+	std::map<int16_t,TLine *>GEMPlane_yz;
+	for (int i =1; i <=6;i++){
+		GEMPlane_yz[i]=new TLine(-positionshift_y[i]*0.0004,positionZpos[i],positionshift_y[i]*0.0004,positionZpos[i]);
+		GEMPlane_yz[i]->SetLineWidth(2);
+		GEMPlane_yz[i]->Draw("same");
+	}
+
+	//draw GEM
+	for(auto histo=GEMHisto_yz.begin();histo!=GEMHisto_yz.end();histo++){
+		histo->second->Draw("HISTPsame");
+	}
+
+	// draw VDC
+	if(fvdcYNum>0){
+		TH1F *vdchisto=new TH1F("vdc_yz","vdc_yz",3.8/0.00004,-2.5,1.3);
+		vdchisto->Fill(fvdcY[0],0.00001);     // change to the first track
+		vdchisto->SetMarkerStyle(20);
+		vdchisto->SetMarkerColor(2);
+		vdchisto->SetMarkerSize(1);
+		vdchisto->Draw("HISTPsame");
+
+		TLine *vdcTrack=new TLine(fvdcY[0],0.001,fvdcY[0]+positionZpos[6]*fvdc_ph[0],positionZpos[6]);
+		vdcTrack->SetLineWidth(1);
+		vdcTrack->SetLineColor(6);
+		vdcTrack->Draw("HISTPsame");
+	}
+
 	eventCanvas->Update();
-	if(fvdcXNum>0){
-		getchar();
-		eventCanvas->SaveAs();
+	if(fvdcXNum>0 || fvdcYNum>0)
+	{
+//		getchar();
+		eventCanvas->SaveAs(Form("result/PRex_Evt%d.jpg",entry));
 	}
 
 	}
