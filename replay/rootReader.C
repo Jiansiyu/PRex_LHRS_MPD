@@ -31,6 +31,8 @@ void rootReader(TString fname="test_20532.root"){
 	fileio->GetObject("T",PRex_GEM_tree);
 	if(PRex_GEM_tree->IsZombie()){
 		std::cout<<"[Error]: can not find tree in the file !!!"<<std::endl;
+	}else{
+		std::cout<<"Total Entries in the file:"<< (PRex_GEM_tree->GetEntries())<<std::endl;
 	}
 
 
@@ -47,7 +49,7 @@ void rootReader(TString fname="test_20532.root"){
 	}
 
 	// load the data
-
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 
 	// initialize the buffers
 	for (auto chamberID : chamberList){
@@ -62,8 +64,8 @@ void rootReader(TString fname="test_20532.root"){
 			}
 		}
 		std::cout<<std::endl;
-
 	}
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 
 	// allocate the memory to the tree
 
@@ -81,14 +83,16 @@ void rootReader(TString fname="test_20532.root"){
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fEvtNumForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fEvtNumForm.c_str(),&fEvtNum);
 	}else{
-		std::cout<<"[Warning]:: fEvtNum data did not find in the replay resuly"<<std::endl;
+		std::cout<<"[Warning]:: fEvtNum data did not find in the replay resuly, skip it"<<std::endl;
 	}
 	std::string fRunForm("Event_Branch/fEvtHdr/fEvtHdr.fRun");
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fRunForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fRunForm.c_str(),&fRun);
 	}else{
-		std::cout<<"[Warning]:: fRun data did not find in the replay resuly"<<std::endl;
+		std::cout<<"[Warning]:: fRun data did not find in the replay resuly, skip it"<<std::endl;
 	}
+
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 
 	std::string fvdcXNumForm(Form("Ndata.R.tr.x"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcXNumForm.c_str())){
@@ -97,18 +101,25 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Warning]:: VDC data did not find in the replay resuly"<<std::endl;
 	}
 
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
+
 	std::string fvdcXForm(Form("R.tr.x"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcXForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdcXForm.c_str(),fvdcX);
 	}else{
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
+
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
+
 	std::string fvdc_th_Form(Form("R.tr.th"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdc_th_Form.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdc_th_Form.c_str(),fvdc_th);
 	}else{
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
+
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 
 	std::string fvdc_ph_Form(Form("R.tr.ph"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdc_ph_Form.c_str())){
@@ -117,12 +128,17 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
 
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
+
 	std::string fvdcYNumForm(Form("Ndata.R.tr.y"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcYNumForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdcYNumForm.c_str(),&fvdcYNum);
 	}else{
 		std::cout<<"[Warning]:: VDC data did not find in the replay resuly"<<std::endl;
 	}
+
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
+
 	std::string fvdcYForm(Form("R.tr.y"));
 	if(PRex_GEM_tree->GetListOfBranches()->Contains(fvdcYForm.c_str())){
 		PRex_GEM_tree->SetBranchAddress(fvdcYForm.c_str(),fvdcY);
@@ -130,7 +146,7 @@ void rootReader(TString fname="test_20532.root"){
 		std::cout<<"[Warning]:: VDC data did not find in the replay result"<<std::endl;
 	}
 
-
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
     //  chamber / value
 	std::map<int16_t,double_t *>fstrip;
 	std::map<int16_t,Int_t> fstripNum;
@@ -138,15 +154,18 @@ void rootReader(TString fname="test_20532.root"){
 	std::map<Int_t,std::map<Int_t,Int_t>> fadcNum;
 	std::map<Int_t,std::map<Int_t,double_t *>> fadc;
 	std::string gem_root_header("RGEM.rgems");
+
 	for (auto chamberID : chamberList){
 		for(auto adc_sample : TsampleLit[chamberID]){
+			std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<" Working on : Chamber"<< chamberID<<"	sample"<<adc_sample<<std::endl;
 
 			std::string fstripNumFormat(Form("Ndata.%s.x%d.strip.number",gem_root_header.c_str(),chamberID));
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fstripNumFormat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fstripNumFormat.c_str(),&fstripNum[chamberID]);
 			}
+			std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 			// load the strip number informations
-			fstrip[chamberID]=new double_t [100];//[(fstripNum[chamberID])];
+			fstrip[chamberID]=new double_t [1000];//[(fstripNum[chamberID])];
 			std::string fstripFormat(Form("%s.x%d.strip.number",gem_root_header.c_str(),chamberID));
 			if (PRex_GEM_tree->GetListOfBranches()->Contains(fstripFormat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fstripFormat.c_str(),fstrip[chamberID]);
@@ -157,7 +176,7 @@ void rootReader(TString fname="test_20532.root"){
 				PRex_GEM_tree->SetBranchAddress(fadcNumformat.c_str(),&fadcNum[chamberID][adc_sample]);
 			}
 
-			fadc[chamberID][adc_sample]=new double_t [100];//[(fadcNum[chamberID][adc_sample])];
+			fadc[chamberID][adc_sample]=new double_t [5000];//[(fadcNum[chamberID][adc_sample])];
 			std::string fadcformat(Form("%s.x%d.adc%d",gem_root_header.c_str(),chamberID,adc_sample));
 			if(PRex_GEM_tree->GetListOfBranches()->Contains(fadcformat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fadcformat.c_str(),fadc[chamberID][adc_sample]);
@@ -165,6 +184,7 @@ void rootReader(TString fname="test_20532.root"){
 		}
 	}
 
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 	// read the data for Y dimension
     //  chamber / value
 	std::map<int16_t,double_t *>fstrip_y;
@@ -179,7 +199,7 @@ void rootReader(TString fname="test_20532.root"){
 				PRex_GEM_tree->SetBranchAddress(fstripNumFormat.c_str(),&fstripNum_y[chamberID]);
 			}
 
-			fstrip_y[chamberID]=new double_t [100];//[(fstripNum[chamberID])];
+			fstrip_y[chamberID]=new double_t [1000];//[(fstripNum[chamberID])];
 			std::string fstripFormat(Form("%s.y%d.strip.number",gem_root_header.c_str(),chamberID));
 			if (PRex_GEM_tree->GetListOfBranches()->Contains(fstripFormat.c_str())){
 				PRex_GEM_tree->SetBranchAddress(fstripFormat.c_str(),fstrip_y[chamberID]);
@@ -187,19 +207,29 @@ void rootReader(TString fname="test_20532.root"){
 		}
 	}
 
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 	// read the vdc values
-	for(auto entry=0;entry<PRex_GEM_tree->GetEntries() && entry<2000;entry++){
+
+	std::cout<<"Total Entries:"<<PRex_GEM_tree->GetEntries()<<std::endl;
+	PRex_GEM_tree->Show(1);
+	for(auto entry=1;entry<(PRex_GEM_tree->GetEntries()) && entry<2000;entry++){
+
 	// load the data to the buff
+
 	PRex_GEM_tree->GetEntry(entry);
+
+
+	std::cout<<"[Debug]::"<<__FUNCTION__<<"  LINE::"<<__LINE__<<std::endl;
 	for(auto chamberID:chamberList){
 		std::cout<<"Chamber: "<<chamberID<<std::endl;
+
 		// print out the fired strips
 		std::cout<<"	fired strips("<<fstripNum[chamberID]<<") :: ";
 		for(int i =0 ; i < fstripNum[chamberID];i++){
 			std::cout<<fstrip[chamberID][i]<<" ";
 		}
 		std::cout<<std::endl;
-
+/*
 		//print out the ADC value
 		// print out the fired strips
 		std::cout<<"	ADC0 ("<<fadcNum[chamberID][0]<<") 	:: ";
@@ -217,6 +247,7 @@ void rootReader(TString fname="test_20532.root"){
 			std::cout<<fadc[chamberID][2][i]<<" ";
 		}
 		std::cout<<std::endl;
+*/
 	}
 
 	// load the data to plot
@@ -327,7 +358,7 @@ void rootReader(TString fname="test_20532.root"){
 	vdcplane_yz->SetLineWidth(2);
 	vdcplane_yz->Draw("same");
 
-	// draw GEM planestd::map<int16_t,TLine *>
+
 	std::map<int16_t,TLine *>GEMPlane_yz;
 	for (int i =1; i <=6;i++){
 		GEMPlane_yz[i]=new TLine(-positionshift_y[i]*0.0004,positionZpos[i],positionshift_y[i]*0.0004,positionZpos[i]);
@@ -358,7 +389,7 @@ void rootReader(TString fname="test_20532.root"){
 	eventCanvas->Update();
 	if(fvdcXNum>0 || fvdcYNum>0)
 	{
-//		getchar();
+		getchar();
 		eventCanvas->SaveAs(Form("result/PRex_Evt%d.jpg",entry));
 	}
 
