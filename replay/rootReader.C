@@ -273,7 +273,7 @@ void rootReader(TString fname="test_20532.root"){
 				double_t x=(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
 				double_t z=positionZpos[chamberID];
 				if(chamberID>=4){   // for UVa GEM
-					x=-((double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004);
+					x=((double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004);
 					z=positionZpos[chamberID];
 				}
 				GEMHisto_xz[chamberID]->Fill(x,z);
@@ -290,10 +290,6 @@ void rootReader(TString fname="test_20532.root"){
 			for(auto strips_iter=0;strips_iter<fstripNum_y[chamberID];strips_iter++){
 				double_t y=(double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004;
 				double_t z=positionZpos[chamberID];
-				if(chamberID>=4){   // for UVa GEM
-					y=-((double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004);
-					z=positionZpos[chamberID];
-				}
 				GEMHisto_yz[chamberID]->Fill(y,z);
 			}
 		}
@@ -389,6 +385,7 @@ void rootReader(TString fname="test_20532.root"){
 	eventCanvas->Update();
 	if(fvdcXNum>0 || fvdcYNum>0)
 	{
+	        std::cout<<"Entry:"<<entry<<std::endl;
 		getchar();
 		eventCanvas->SaveAs(Form("result/PRex_Evt%d.jpg",entry));
 	}
