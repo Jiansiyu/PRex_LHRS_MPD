@@ -11,11 +11,45 @@
 #include <string>
 #include <stdlib.h>
 #include <cctype>
+#include <numeric>
 #pragma cling load("libTreeSearch-GEM.so");
 #pragma cling load("../libprexCounting.so");
 
 #define _ROOTREADER_MAX_GEM_CHAMBER 7
 #define _ROOTREADER_MAX_TSAMPLE 3
+
+
+std::vector<std::vector<Int_t>> splitCluster(std::vector<Int_t> StripsVec,Int_t clusterSizeCut=2){
+	std::sort(StripsVec.begin(),StripsVec.end());
+	std::vector<std::vector<Int_t>> result;
+
+	if(StripsVec.size()!=0){
+		std::vector<Int_t> buff;
+		for(auto value=StripsVec.begin();value!=StripsVec.end();value++){
+			if((value+1)!=StripsVec.end()){
+				//std::cout<<*value<<"  next:"<<*value+1<<"  next in buff:"<< *(value+1);
+
+				if((*value+1)==*(value+1)){
+					//std::cout<<"  Match"<<std::endl;
+					buff.push_back(*value);
+				}else{
+					buff.push_back(*value);
+					if(buff.size()>=clusterSizeCut)
+					result.push_back(buff);
+					buff.clear();
+				}
+			}else{
+				buff.push_back(*value);
+				if(buff.size()>=clusterSizeCut)
+				result.push_back(buff);
+				buff.clear();
+			}
+		}
+
+	}
+	return result;
+}
+
 
 void rootReader(TString fname="test_20532.root"){
 	TCanvas *eventCanvas=new TCanvas("CanvasDisplay","CanvasDisplay",1000,1000);
@@ -263,6 +297,68 @@ void rootReader(TString fname="test_20532.root"){
 	std::map<int16_t,TH1F *> GEMHisto_yz;
 	for(auto chamberID : chamberList){
 
+		// add the cluster cut for the GEM detectors
+		std::vector<Int_t> strips_buff_x;
+		std::vector<Int_t> strips_buff_y;
+		if(fstripNum[chamberID]>0){ // if there is hit on this dimension
+			for(auto strips_iter=0;strips_iter<fstripNum[chamberID];strips_iter++){
+				strips_buff_x.push_back(fstrip[chamberID][strips_iter]);
+			}
+		}
+
+		if(fstripNum_y[chamberID]>0){
+			for(auto strips_iter=0;strips_iter<fstripNum_y[chamberID];strips_iter++){
+				strips_buff_y.push_back(fstrip_y[chamberID][strips_iter]);
+			}
+		}
+
+		auto clusterVec_x=splitCluster(strips_buff_x);
+		auto clusterVec_y=splitCluster(strips_buff_y);
+
+		if(clusterVec_x.size()!=0){
+			if(!(GEMHisto_xz.find(chamberID)!=GEMHisto_xz.end())){
+			GEMHisto_xz[chamberID]=new TH1F(Form("chamber%d_xz",chamberID),Form("chamber%d_xz",chamberID),6/0.00004,-3,3);
+			GEMHisto_xz[chamberID]->SetMarkerStyle(20);
+			GEMHisto_xz[chamberID]->SetMarkerSize(1);
+			}
+			for(auto cluster : clusterVec_x){
+				auto strip=std::accumulate(cluster.begin(),cluster.end(),0.0)/cluster.size();
+//				for(auto strip : cluster)
+				{
+					double_t x=(double_t)(strip-positionshift[chamberID])*0.0004;
+					double_t z=positionZpos[chamberID];
+					if(chamberID>=4){
+						x-=0.15;
+					}
+
+					GEMHisto_xz[chamberID]->Fill(x,z);
+				}
+			}
+
+		}
+
+		if(clusterVec_y.size()!=0){
+			if(!(GEMHisto_yz.find(chamberID)!=GEMHisto_yz.end())){
+				GEMHisto_yz[chamberID]=new TH1F(Form("chamber%d_yz",chamberID),Form("chamber%d_yz",chamberID),6/0.00004,-3,3);
+				GEMHisto_yz[chamberID]->SetMarkerStyle(20);
+				GEMHisto_yz[chamberID]->SetMarkerSize(1);
+			}
+			for(auto cluster: clusterVec_y){
+				auto strip=std::accumulate(cluster.begin(),cluster.end(),0.0)/cluster.size();
+				//for(auto strip : cluster)
+				{
+					double_t y=(double_t)(strip-positionshift_y[chamberID])*0.0004;
+					double_t z=positionZpos[chamberID];
+					if(chamberID>=4){
+						y-=0.01;
+					}
+					GEMHisto_yz[chamberID]->Fill(y,z);
+
+				}
+			}
+		}
+
+/*
 		if(fstripNum[chamberID]>0){ // if there is hit on this dimension
 			if(!(GEMHisto_xz.find(chamberID)!=GEMHisto_xz.end())){
 			GEMHisto_xz[chamberID]=new TH1F(Form("chamber%d_xz",chamberID),Form("chamber%d_xz",chamberID),6/0.00004,-3,3);
@@ -273,9 +369,13 @@ void rootReader(TString fname="test_20532.root"){
 				double_t x=(double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004;
 				double_t z=positionZpos[chamberID];
 				if(chamberID>=4){   // for UVa GEM
-					x=((double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004);
-					z=positionZpos[chamberID];
+					 x-=0.15;
+					// z=positionZpos[chamberID];
 				}
+//				if(chamberID>=4){   // for UVa GEM
+//					x=-((double_t)(fstrip[chamberID][strips_iter]-positionshift[chamberID])*0.0004);
+//					z=positionZpos[chamberID];
+//				}
 				GEMHisto_xz[chamberID]->Fill(x,z);
 			}
 		}
@@ -290,9 +390,17 @@ void rootReader(TString fname="test_20532.root"){
 			for(auto strips_iter=0;strips_iter<fstripNum_y[chamberID];strips_iter++){
 				double_t y=(double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004;
 				double_t z=positionZpos[chamberID];
+				if(chamberID>=4){
+					y-=0.01;
+				}
+//				if(chamberID>=4){   // for UVa GEM
+//					double_t y=-(double_t)(fstrip_y[chamberID][strips_iter]-positionshift_y[chamberID])*0.0004;
+//					double_t z=positionZpos[chamberID];
+//				}
 				GEMHisto_yz[chamberID]->Fill(y,z);
 			}
 		}
+		*/
 	}
 
 
@@ -383,10 +491,10 @@ void rootReader(TString fname="test_20532.root"){
 	}
 
 	eventCanvas->Update();
-	if(fvdcXNum>0 || fvdcYNum>0)
+	if((fvdcXNum>0 || fvdcYNum>0)&&entry<200)
 	{
 	        std::cout<<"Entry:"<<entry<<std::endl;
-		getchar();
+//		getchar();
 		eventCanvas->SaveAs(Form("result/PRex_Evt%d.jpg",entry));
 	}
 
