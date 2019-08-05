@@ -38,3 +38,11 @@ This issues is caused by the Analyzer. The Max Chan and the DATA is not large en
 ## some other issues
 
 ### 1. in the mapping the gem_id in the mapping does not match the configuration
+
+
+## branch instructions
+
+### 1. prex_rhrs
+
+Main branch for the PRex_MPD. Should be the stable and working version. 
+
