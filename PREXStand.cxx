@@ -14,6 +14,7 @@
 #include <sstream>
 #include <cctype>
 #include <cassert>
+#include <vector>
 // for test perpose
 #include "iostream"
 
@@ -71,13 +72,144 @@ void PREXStand::CalcTargetCoords(THaTrack *track){
 	//  -- Siyu
 
 	// Test the data in the buffer
-	std::cout<<"In transport Plane ("<<(track->GetX())<<","<<(track->GetY())<<std::endl;
+// std::cout<<"In transport Plane ("<<(track->GetX())<<","<<(track->GetY())<<std::endl;
+	
+	// calculate the Focal plane coordination variables
+ CalcFocalPlaneCoords(track);
+	
+	
+  //Project the Focal Plane to the Target
+  // calculates target coordinates from focal plane coordinates
 
+  const Int_t kNUM_PRECOMP_POW = 10;
+
+  Double_t x_fp, y_fp, th_fp, ph_fp;
+  Double_t powers[kNUM_PRECOMP_POW][5];  // {(x), th, y, ph, abs(th) }
+  Double_t x, y, theta, phi, dp, p, pathl;
+
+  // first select the coords to use
+  if( fCoordType == kTransport ) {
+    x_fp = track->GetX();
+    y_fp = track->GetY();
+    th_fp = track->GetTheta();
+    ph_fp = track->GetPhi();
+  } else {  // kRotatingTransport
+    x_fp = track->GetRX();
+    y_fp = track->GetRY();
+    th_fp = track->GetRTheta();
+    ph_fp = track->GetRPhi();
+  }
+  
+   // calculate the powers we need
+  for(int i=0; i<kNUM_PRECOMP_POW; i++) {
+    powers[i][0] = pow(x_fp, i);
+    powers[i][1] = pow(th_fp, i);
+    powers[i][2] = pow(y_fp, i);
+    powers[i][3] = pow(ph_fp, i);
+    powers[i][4] = pow(TMath::Abs(th_fp),i);
+  }
+
+  // calculate the matrices we need
+  CalcMatrix(x_fp, fDMatrixElems);
+  CalcMatrix(x_fp, fTMatrixElems);
+  CalcMatrix(x_fp, fYMatrixElems);
+  CalcMatrix(x_fp, fYTAMatrixElems);
+  CalcMatrix(x_fp, fPMatrixElems);
+  CalcMatrix(x_fp, fPTAMatrixElems);
+  
+  // calculate the coordinates at the target
+  theta = CalcTargetVar(fTMatrixElems, powers);
+  phi = CalcTargetVar(fPMatrixElems, powers)+CalcTargetVar(fPTAMatrixElems,powers);
+  y = CalcTargetVar(fYMatrixElems, powers)+CalcTargetVar(fYTAMatrixElems,powers);
+
+  //THaSpectrometer *app = static_cast<THaSpectrometer*>(GetApparatus());
+  // calculate momentum
+  dp = CalcTargetVar(fDMatrixElems, powers);
+  p  = GetPcentral() * (1.0+dp);
+
+  // pathlength matrix is for the Transport coord plane
+  //pathl = CalcTarget2FPLen(fLMatrixElems, powers);
+
+  //FIXME: estimate x ??
+  x = 0.0;
+
+  // Save the target quantities with the tracks
+  track->SetTarget(x, y, theta, phi);
+  track->SetDp(dp);
+  track->SetMomentum(p);
+  track->SetPathLen(pathl);
+	
+}
+//_____________________________________________________________________________
+Double_t PREXStand::CalcTargetVar(const vector<THaMatrixElement>& matrix,
+                               const Double_t powers[][5])
+{
+  // calculates the value of a variable at the target
+  // the x-dependence is already in the matrix, so only 1-3 (or np) used
+  Double_t retval=0.0;
+  Double_t v=0;
+  for( vector<THaMatrixElement>::const_iterator it=matrix.begin();
+       it!=matrix.end(); ++it )
+    if(it->v != 0.0) {
+      v = it->v;
+      unsigned int np = it->pw.size(); // generalize for extra matrix elems.
+      for (unsigned int i=0; i<np; ++i)
+        v *= powers[it->pw[i]][i+1];
+      retval += v;
+  //      retval += it->v * powers[it->pw[0]][1]
+  //                  * powers[it->pw[1]][2]
+  //                  * powers[it->pw[2]][3];
+    }
+
+  return retval;
 }
 
 //_____________________________________________________________________________
-void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
+void PREXStand::CalcMatrix(const Double_t x, vector<THaMatrixElement>& matrix){
+  // calculates the values of the matrix elements for a given location
+  // by evaluating a polynomial in x of order it->order with
+  // coefficients given by it->poly
 
+  for( vector<THaMatrixElement>::iterator it=matrix.begin();
+       it!=matrix.end(); ++it ) {
+    it->v = 0.0;
+
+    if(it->order > 0) {
+      for(int i=it->order-1; i>=1; --i)
+        it->v = x * (it->v + it->poly[i]);
+      it->v += it->poly[0];
+    }
+  }
+}
+//_____________________________________________________________________________
+void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
+	// for GEM, it is already in Transport Coordination System
+	// Start from Transpot Coordination System, Project to the Focal plane
+	// --Siyu 
+	
+	// read the Transport Coordination System Value
+
+	double_t theta=track->GetTheta();
+	double_t phi=track->GetPhi();
+	double_t x=track->GetX();
+	double_t y=track->GetY();
+	
+	// then calculate the rotating transport frame coordinates
+	Double_t r_x = x;
+	//
+	CalcMatrix(r_x, fFPMatrixElems);
+	Double_t r_y = y - fFPMatrixElems[Y000].v;  // Y000
+	
+	// TODO Questions ???
+	// Calculate now the tan(rho) and cos(rho) of the local rotation angle.
+    Double_t tan_rho_loc = fFPMatrixElems[T000].v;   // T000
+    Double_t cos_rho_loc = 1.0/sqrt(1.0+tan_rho_loc*tan_rho_loc);
+    
+    // TODO it is not right, need to correct
+    Double_t r_phi   = track->GetPhi();
+    Double_t r_theta = track->GetTheta();
+    
+    track->SetR(r_x, r_y, r_theta, r_phi);  // the roration transport
 }
 
 //_____________________________________________________________________________
@@ -219,7 +351,8 @@ Int_t PREXStand::ReadDatabase(const TDatime &date){
 	FILE* file = OpenFile( date );
 	if( !file ) return kFileError;
 
-	  // Read fOrigin and fSize (currently unused)
+// for GEM it does not needed
+// Read fOrigin and fSize (currently unused)
 //	Int_t err = ReadGeometry( file, date );
 //	if( err ) {
 //	   fclose(file);
@@ -265,9 +398,9 @@ Int_t PREXStand::ReadDatabase(const TDatime &date){
 	    { "matrixelem",  &MEstring, kString },
 	    { 0 }
 	  };
-	  //std::cout<<"fPrefix"<<fPrefix<<std::endl;
-	  //Int_t err = LoadDB( file, date, request1, fPrefix );
-	  /*
+	 std::cout<<"fPrefix"<<fPrefix<<std::endl;
+	 Int_t err = LoadDB( file, date, request1, fPrefix );
+	  
 	  if( err ) {
 	    fclose(file);
 	    return err;
@@ -303,9 +436,6 @@ Int_t PREXStand::ReadDatabase(const TDatime &date){
 	    fclose(file);
 	    return err;
 	  }
-*/
-
-
 	return kOK;
 }
 

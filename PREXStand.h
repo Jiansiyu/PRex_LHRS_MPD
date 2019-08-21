@@ -2,7 +2,7 @@
 #define ROOT_TreeSearch_PREXStand
 
 #include "THaSpectrometer.h"
-
+#include <vector>
 class PREXStand : public THaSpectrometer {
 
 public:
@@ -16,7 +16,6 @@ public:
     virtual Int_t  ReadDatabase( const TDatime& date );
     void CalcTargetCoords(THaTrack *the_track );
     void CalcFocalPlaneCoords( THaTrack* track );
-
     //_________________________________
     // used for the database
     enum { kPORDER = 7 };
@@ -37,7 +36,9 @@ public:
       double v;                // its computed value
       std::vector<double> poly;// the associated polynomial
     };
-
+    void CalcMatrix(const Double_t x, std::vector<THaMatrixElement>&matrix);
+    Double_t CalcTargetVar(const std::vector<THaMatrixElement>& matrix,const Double_t powers[][5]);
+    
 protected:
     enum ECoordType { kTransport, kRotatingTransport };
     enum EFPMatrixElemTag { T000 = 0, Y000, P000 };
@@ -51,10 +52,10 @@ protected:
     std::vector<THaMatrixElement> fFPMatrixElems;  // matrix elements used in
                                               // focal plane transformations
                                               // { T, Y, P }
-
+  
     std::vector<THaMatrixElement> fLMatrixElems;   // Path-length corrections (meters)
 
-
+    ECoordType fCoordType;
     protected:
     ClassDef(PREXStand,0) // BigBite spectrometer
 };
