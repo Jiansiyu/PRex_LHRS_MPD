@@ -60,6 +60,13 @@ Int_t PREXStand::FindVertices( TClonesArray& tracks/* tracks */ )
 	  THaTrack * theTrack = static_cast<THaTrack*>( tracks.At(t) );
 	  CalcTargetCoords(theTrack);
   }
+  if(n_exist!=0){
+   fGoldenTrack= static_cast<THaTrack*>(tracks.At(0));
+   fTrkIfo = *fGoldenTrack;
+   fTrk    = fGoldenTrack;
+  }else{
+  fGoldenTrack=NULL;
+  }
   return 0;
 }
 
