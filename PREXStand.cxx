@@ -27,7 +27,7 @@ typedef vector<PREXStand::THaMatrixElement> MEvec_t;
 struct MEdef_t {
   MEdef_t() : npow(0), elems(0), isfp(false), fpidx(0) {}
   MEdef_t( Int_t npw, MEvec_t* elemp, Bool_t is_fp = false, Int_t fp_idx = 0 )
-    : npow(npw), elems(elemp), isfp(is_fp), fpidx(fp_idx) {}
+    : npow(npw), elems(elemp), isfp(is_fp), fpidx(fp_idx),fCoordType(kRotatingTransport) {}
   MEvec_t::size_type npow; // Number of exponents for this element type
   MEvec_t* elems;          // Pointer to member variable holding data
   Bool_t isfp;             // This defines a focal plane matrix element
@@ -60,7 +60,7 @@ Int_t PREXStand::FindVertices( TClonesArray& tracks/* tracks */ )
 	  THaTrack * theTrack = static_cast<THaTrack*>( tracks.At(t) );
 	  CalcTargetCoords(theTrack);
   }
-  if(n_exist!=0){
+  if(n_exist==1){
    fGoldenTrack= static_cast<THaTrack*>(tracks.At(0));
    fTrkIfo = *fGoldenTrack;
    fTrk    = fGoldenTrack;
@@ -75,12 +75,8 @@ void PREXStand::CalcTargetCoords(THaTrack *track){
 	// Since the GEM detector already in Transport Coordination System, it does not need to transform from DCS to TCS
 	// This is slightly different from the VDC
 	// The CalcFocalPlaneCoord in the VDC is calculated in ConstructTracks,
-	// It also would be fine to calculate here ?
 	//  -- Siyu
 
-	// Test the data in the buffer
-// std::cout<<"In transport Plane ("<<(track->GetX())<<","<<(track->GetY())<<std::endl;
-	
 	// calculate the Focal plane coordination variables
  CalcFocalPlaneCoords(track);
 	
@@ -95,12 +91,14 @@ void PREXStand::CalcTargetCoords(THaTrack *track){
   Double_t x, y, theta, phi, dp, p, pathl;
 
   // first select the coords to use
-  if( fCoordType == kTransport ) {
+  if( fCoordType == kTransport ) 
+  {
     x_fp = track->GetX();
     y_fp = track->GetY();
     th_fp = track->GetTheta();
     ph_fp = track->GetPhi();
-  } else {  // kRotatingTransport
+  } else 
+  {  // kRotatingTransport
     x_fp = track->GetRX();
     y_fp = track->GetRY();
     th_fp = track->GetRTheta();
@@ -202,7 +200,6 @@ void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
 	
 	// then calculate the rotating transport frame coordinates
 	Double_t r_x = x;
-	//
 	CalcMatrix(r_x, fFPMatrixElems);
 	Double_t r_y = y - fFPMatrixElems[Y000].v;  // Y000
 	
@@ -361,14 +358,6 @@ Int_t PREXStand::ReadDatabase(const TDatime &date){
 	//std::cout<<"\n\n\n This is a test for read the database \n\n\n"<<date.Print()<<std::endl;
 	FILE* file = OpenFile( date );
 	if( !file ) return kFileError;
-
-// for GEM it does not needed
-// Read fOrigin and fSize (currently unused)
-//	Int_t err = ReadGeometry( file, date );
-//	if( err ) {
-//	   fclose(file);
-//	   return err;
-//	 }
 
 	  // Read TRANSPORT matrices
 	  //FIXME: move to HRS
