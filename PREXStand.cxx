@@ -195,7 +195,6 @@ void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
 	// --Siyu 
 	
 	// read the Transport Coordination System Value
-
 	double_t theta=track->GetTheta();
 	double_t phi=track->GetPhi();
 	double_t x=track->GetX();
@@ -212,9 +211,14 @@ void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
     Double_t tan_rho_loc = fFPMatrixElems[T000].v;   // T000
     Double_t cos_rho_loc = 1.0/sqrt(1.0+tan_rho_loc*tan_rho_loc);
     
-    // TODO it is not right, need to correct
-    Double_t r_phi   = track->GetPhi();
-    Double_t r_theta = track->GetTheta();
+    // calculate the detector plan coordinations according to the Transport coordination
+    double_t d_theta= (theta-tan_rho_loc)/(1.0 + theta*tan_rho_loc);
+    double_t d_phi  = theta * cos_rho_loc *(1.00- d_theta*tan_rho_loc );
+
+    Double_t r_phi   = (d_phi - fFPMatrixElems[P000].v /* P000 */)/
+    	    (1.0-d_theta*tan_rho_loc) / cos_rho_loc;
+    Double_t r_theta = (d_theta+tan_rho_loc) /
+    	    (1.0-d_theta*tan_rho_loc);
     
     track->SetR(r_x, r_y, r_theta, r_phi);  // the roration transport
 }
