@@ -25,6 +25,8 @@ Contains:
 * MPDGEMPlane::ChargeDep, disabled the deconverlution to solve the negative adc issues. 
 * changed the Pedestals to the UVa standard pedestal 
 * some return raw data size does not match '128*Nsamples', ignored those APVs
+* change the PREXStand class, add the function used for project the GEM (Transport Coordination System) to the Focal Plane Coordination and to the Target Coordination System.
+* Add another file in the database so as to input the Projection Matrix. Latter will need to merge to the main GEM database
 
 ## troubleshooting 
 ### 1. THaSlotData.h:160: int Decoder::THaSlotData::getData(int, int) const: Assertion `chan >= 0 && chan < (int)maxc && hit >= 0 && hit < numHits[chan]' failed. 
@@ -38,7 +40,7 @@ This issues is caused by the Analyzer. The Max Chan and the DATA is not large en
 ## some other issues
 
 ### 1. in the mapping the gem_id in the mapping does not match the configuration
-
+### 2. The formula for the Projection need to check again. Maybe not very right
 
 ## branch instructions
 
