@@ -350,17 +350,17 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 			//assert(nsamp == N_APV25_CHAN*fMaxSamp);
 			}
 
-			Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
+			//Double_t arrADCSum[128]; // Copy of ADC sum for CMN Calculation
 
 			// Get the raw data
-			Int_t fNchStartOfAPV = fNch; // count the number of fired strips
+			//Int_t fNchStartOfAPV = fNch; // count the number of fired strips
 
 			Int_t rawADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the raw result
 			Int_t ADCBuff[N_MPD_TIME_SAMP][N_APV25_CHAN]; // used for temporary buffer the result
 			Int_t ADCBuffSum[N_APV25_CHAN];
 
 			for (int j = 0; j < N_APV25_CHAN; j++) {
-				for (int i = 0; i < fMaxSamp; i++) {
+				for (unsigned int i = 0; i < fMaxSamp; i++) {
 					rawADCBuff[i][j] = 0;
 					ADCBuff[i][i] = 0;
 				}
@@ -423,7 +423,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 				samples.clear();
 
 				if (isAboveThreshold) {
-					for (auto adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+					for (unsigned int adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
 
 						frawADC[adc_samp][fNch] = rawADCBuff[adc_samp][strip];
 						fADCForm[adc_samp][fNch] = ADCBuff[adc_samp][strip];
@@ -679,7 +679,7 @@ MPDStripData_t MPDGEMPlane::ChargeDep( const std::vector<Float_t>& amp ) {
 
     //FIXME: from database, proper value for Tp
     const Float_t delta_t = 25.0; // time interval between samples (ns)
-    const Float_t Tp      = 50.0; // RC filter time constant (ns)
+    //const Float_t Tp      = 50.0; // RC filter time constant (ns)
 
     assert( amp.size() >= 3 );
 

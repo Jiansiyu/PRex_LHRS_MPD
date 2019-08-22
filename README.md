@@ -37,10 +37,13 @@ This issues is caused by the Analyzer. The Max Chan and the DATA is not large en
     const UShort_t THaCrateMap::MAXDATA = 32768 * 2;
 
 
-## some other issues
+## some other issues and TODOs
 
 ### 1. in the mapping the gem_id in the mapping does not match the configuration
 ### 2. The formula for the Projection need to check again. Maybe not very right
+### 3. Add the rotation correction algorithm and also new Eular angle correction parameters need to be added in the database 
+
+
 
 ## branch instructions
 

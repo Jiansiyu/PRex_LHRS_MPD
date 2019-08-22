@@ -55,8 +55,10 @@ protected:
   
     std::vector<THaMatrixElement> fLMatrixElems;   // Path-length corrections (meters)
 
-    ECoordType fCoordType;
-    protected:
+    //fCoordType(kRotatingTransport)
+    ECoordType fCoordType=kRotatingTransport;
+
+protected:
     ClassDef(PREXStand,0) // BigBite spectrometer
 };
 

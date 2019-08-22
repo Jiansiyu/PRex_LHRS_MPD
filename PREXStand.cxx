@@ -27,7 +27,7 @@ typedef vector<PREXStand::THaMatrixElement> MEvec_t;
 struct MEdef_t {
   MEdef_t() : npow(0), elems(0), isfp(false), fpidx(0) {}
   MEdef_t( Int_t npw, MEvec_t* elemp, Bool_t is_fp = false, Int_t fp_idx = 0 )
-    : npow(npw), elems(elemp), isfp(is_fp), fpidx(fp_idx),fCoordType(kRotatingTransport) {}
+    : npow(npw), elems(elemp), isfp(is_fp), fpidx(fp_idx) {}
   MEvec_t::size_type npow; // Number of exponents for this element type
   MEvec_t* elems;          // Pointer to member variable holding data
   Bool_t isfp;             // This defines a focal plane matrix element
