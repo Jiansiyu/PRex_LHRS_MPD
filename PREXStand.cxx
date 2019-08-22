@@ -91,14 +91,12 @@ void PREXStand::CalcTargetCoords(THaTrack *track){
   Double_t x, y, theta, phi, dp, p, pathl;
 
   // first select the coords to use
-  if( fCoordType == kTransport ) 
-  {
+  if( fCoordType == kTransport ) {
     x_fp = track->GetX();
     y_fp = track->GetY();
     th_fp = track->GetTheta();
     ph_fp = track->GetPhi();
-  } else 
-  {  // kRotatingTransport
+  } else {  // kRotatingTransport
     x_fp = track->GetRX();
     y_fp = track->GetRY();
     th_fp = track->GetRTheta();
@@ -191,6 +189,7 @@ void PREXStand::CalcFocalPlaneCoords( THaTrack* track ){
 	// for GEM, it is already in Transport Coordination System
 	// Start from Transpot Coordination System, Project to the Focal plane
 	// --Siyu 
+	//https://hallaweb.jlab.org/publications/Technotes/files/2002/02-012.pdf
 	
 	// read the Transport Coordination System Value
 	double_t theta=track->GetTheta();
