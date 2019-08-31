@@ -26,6 +26,7 @@ Contains:
 * some return raw data size does not match '128*Nsamples', ignored those APVs
 * change the PREXStand class, add the function used for project the GEM (Transport Coordination System) to the Focal Plane Coordination and to the Target Coordination System.
 * Add another file in the database so as to input the Projection Matrix. Latter will need to merge to the main GEM database
+* add another parameter named "fADCnoise" in the out put root file. This contains all the channel's ADC value that did not pass the sigma cut
 
 ## troubleshooting 
 #### 1. THaSlotData.h:160: int Decoder::THaSlotData::getData(int, int) const: Assertion `chan >= 0 && chan < (int)maxc && hit >= 0 && hit < numHits[chan]' failed. 
@@ -50,7 +51,12 @@ This issues is caused by the Analyzer. The Max Chan and the DATA is not large en
 
 Main branch for the PRex_MPD. The mainly test branch for the development.
 
-##### 2. prex_rhrs_stable
+##### 2. master & prex\_rhrs\_stable
 
 Main branch for the PRex_MPD. It should be the most updated stable version. 
 
+##### 3. prex\_rhrs\_gem\_performance
+
+Test branch used for Generate the GEM plot. 
+
+* add another parameter named "fADCnoise" in the out put root file. This contains all the channel's ADC value that did not pass the sigma cut
