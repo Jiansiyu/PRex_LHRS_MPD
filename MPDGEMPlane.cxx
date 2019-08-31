@@ -221,6 +221,7 @@ Int_t MPDGEMPlane::ReadDatabase( const TDatime& date ){
 
     fADCraw = new Float_t[fNelem];
     fADC = new Float_t[fNelem];
+    fADCnoise= new Float_t[fNelem];
     fHitTime = new Float_t[fNelem];
     fADCcor = new Float_t[fNelem];
     fGoodHit = new Byte_t[fNelem];
@@ -243,7 +244,8 @@ Int_t MPDGEMPlane::DefineVariables( EMode mode ) {
           { "occupancy",      "nstrips / n_all_strips",           "fOccupancy" },
           { "strip.adcraw",   "Raw strip ADC sum",                "fADCraw" },
           { "strip.adc",      "Deconvoluted strip ADC sum",       "fADC" },
-          { "strip.adc_c",    "Pedestal-sub strip ADC sum",       "fADCcor" },
+		  { "strip.adcnoise",      "Deconvoluted strip ADC sum for channels did not pass the sigma cut",       "fADCnoise" },
+		  { "strip.adc_c",    "Pedestal-sub strip ADC sum",       "fADCcor" },
           { "strip.time",     "Leading time of strip signal (ns)","fHitTime" },
           { "strip.good",     "Good pulse shape on strip",        "fGoodHit" },
           { "strip.number", "Strip number mapping", "fSigStrips" },
@@ -439,13 +441,18 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					fADC[RstripPos] = stripdata.adc;
 					fHitTime[RstripPos] = stripdata.time;
 					fGoodHit[RstripPos] = stripdata.pass;
-
 					fADCcor[RstripPos] = stripdata.adc;
-
-					//std::cout<<" fadcOriginCheck:: position:"<<RstripPos<<"  value:"<<fADCcor[RstripPos]<<std::endl;
+				}else{
+				// if did not pass the sigma cut threshold
+					for (unsigned int adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
+						samples.push_back((float_t) ADCBuff[adc_samp][strip]);
+					}
+					MPDStripData_t stripdata = ChargeDep(samples);
+					fADCnoise[RstripPos]=stripdata.adc;
 				}
-				if (isAboveThreshold) {
 
+
+				if (isAboveThreshold) {
 					fSigStrips.push_back(RstripPos);
 				}
 
@@ -459,7 +466,6 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 	}
     fHitOcc    = static_cast<Double_t>(fNhitStrips) / fNelem;
     fOccupancy = static_cast<Double_t>(GetNsigStrips()) / fNelem;
-
 
     return FindGEMHits();
 }

@@ -81,7 +81,9 @@ class MPDGEMPlane : public TreeSearch::GEMPlane {
         Int_t *frADC3; // [fNch]
         Int_t *frADC4; // [fNch]
         Int_t *frADC5; // [fNch]
-         
+
+        // for GEM test perpose
+        Float_t*      fADCnoise;         // [fNelem] Integral of deconvoluted ADC samples for the channel ADC that did not pass the 5-sigma cut
 	Vflt_t fRMS;
         Double_t trigger_time;
         Int_t ev_num;
