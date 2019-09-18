@@ -448,7 +448,7 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 						samples.push_back((float_t) ADCBuff[adc_samp][strip]);
 					}
 					MPDStripData_t stripdata = ChargeDep(samples);
-					fADCnoise[RstripPos]=stripdata.adc;
+					fADCnoise[RstripPos]=stripdata.adc/3.0;
 				}
 
 
