@@ -438,10 +438,10 @@ Int_t MPDGEMPlane::Decode( const THaEvData& evdata ){
 					++fNhitStrips;
 
 					fADCraw[RstripPos] = stripdata.adcraw;
-					fADC[RstripPos] = stripdata.adc;
+					fADC[RstripPos] = stripdata.adc/3.0;
 					fHitTime[RstripPos] = stripdata.time;
 					fGoodHit[RstripPos] = stripdata.pass;
-					fADCcor[RstripPos] = stripdata.adc;
+					fADCcor[RstripPos] = stripdata.adc/3.0;
 				}else{
 				// if did not pass the sigma cut threshold
 					for (unsigned int adc_samp = 0; adc_samp < fMaxSamp; adc_samp++) {
